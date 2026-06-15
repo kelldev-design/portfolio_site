@@ -16,6 +16,7 @@ import { Admin } from './routes/Admin'
 import { Contact } from './routes/Contact'
 import { Home } from './routes/Home'
 import { Login } from './routes/Login'
+import { Movies } from './routes/Movies'
 import { Project } from './routes/Project'
 import { ProjectDemo } from './routes/ProjectDemo'
 
@@ -50,6 +51,10 @@ const router = createBrowserRouter([
       {
         path: '/contact',
         element: <Contact />
+      },
+      {
+        path: '/movies',
+        element: <Movies />
       },
       {
         path: '/project/:projectId',
