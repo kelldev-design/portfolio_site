@@ -5,6 +5,7 @@ export const SelectCustomStyles = css`
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0px;
 
   .select-label {
     font-size: 11px;
@@ -21,6 +22,7 @@ export const SelectCustomStyles = css`
     color: ${GREY2};
     cursor: pointer;
     font-size: 13px;
+    text-overflow: ellipsis;
     padding: 6px 28px 6px 10px;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
     background-repeat: no-repeat;

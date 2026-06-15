@@ -240,10 +240,12 @@ const MoviesContent: FunctionComponent = () => {
             t={0}
           >
             <TagH size={2}>
-              Films
+                Films
             </TagH>
           </Spacer>
-          { renderControls() }
+          <div>
+            { renderControls() }
+          </div>
           <ul className='movies-list'>
             { displayedMovies.map(({ title, year, director, favorite }) => (
               <li

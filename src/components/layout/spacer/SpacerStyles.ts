@@ -25,6 +25,9 @@ export const SpacerStyles = css<SpacerStrings>`
     padding-top: ${t ?? SPACING_Y_L};
   `)}
 
+  max-width: 100%;
+  box-sizing: border-box;
+
   &.spacer-flex {
     display: flex;
   }
