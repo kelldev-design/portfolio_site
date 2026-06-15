@@ -1,10 +1,13 @@
 import {
   type FunctionComponent,
   type ReactElement,
-  useContext
+  useContext,
+  useState,
+  useMemo
 } from 'react'
 import styled from 'styled-components'
 import { MoviesContentStyles } from './MoviesContentStyles'
+import { SelectCustom } from '../../common/select-custom/SelectCustom'
 import { TagH } from '../../common/tag-h/TagH'
 import { TagP } from '../../common/tag-p/TagP'
 import { Container } from '../../layout/container/Container'
@@ -14,6 +17,8 @@ import { Spacer } from '../../layout/spacer/Spacer'
 import { PortfolioContext } from '../../wrappers/PortfolioContextProvider'
 
 const MoviesContentStyled = styled.div`${MoviesContentStyles}`
+
+type SortKey = 'title' | 'year' | 'director'
 
 const MOVIES = [
   { title: '10 Cloverfield Lane', year: 2016, director: 'Dan Trachtenberg', favorite: false },
@@ -136,6 +141,7 @@ const MOVIES = [
   { title: 'The Childhood of a Leader', year: 2015, director: 'Brady Corbet', favorite: false },
   { title: 'The Devil\'s Advocate', year: 1997, director: 'Taylor Hackford', favorite: false },
   { title: 'The East', year: 2013, director: 'Zal Batmanglij', favorite: false },
+  { title: 'The Fifth Element', year: 1997, director: 'Luc Besson', favorite: false },
   { title: 'The Game', year: 1997, director: 'David Fincher', favorite: true },
   { title: 'The Gift', year: 2015, director: 'Joel Edgerton', favorite: true },
   { title: 'The Imitation Game', year: 2014, director: 'Morten Tyldum', favorite: false },
@@ -167,8 +173,52 @@ const MOVIES = [
   { title: 'X', year: 2022, director: 'Ti West', favorite: false }
 ]
 
+const DIRECTORS = Array.from(new Set(MOVIES.map(m => m.director))).sort()
+
 const MoviesContent: FunctionComponent = () => {
   const { isNavigating } = useContext(PortfolioContext)
+  const [ movies ] = useState(MOVIES)
+  const [ sortKey, setSortKey ] = useState<SortKey>('title')
+  const [ directorFilter, setDirectorFilter ] = useState('')
+
+  const displayedMovies = useMemo(
+    () => {
+      const filtered = directorFilter
+        ? movies.filter(m => m.director === directorFilter)
+        : movies
+
+      return [ ...filtered ].sort((a, b) => {
+        if (sortKey === 'year') return a.year - b.year
+        return a[sortKey].localeCompare(b[sortKey])
+      })
+    },
+    [ movies, sortKey, directorFilter ]
+  )
+
+  const renderControls = (): ReactElement =>
+    <div className='movies-controls'>
+      <SelectCustom
+        id='sort'
+        label='Sort by'
+        onChange={e => { setSortKey(e.target.value as SortKey) }}
+        options={[
+          { value: 'title', label: 'Name' },
+          { value: 'year', label: 'Year' },
+          { value: 'director', label: 'Director' }
+        ]}
+        value={sortKey}
+      />
+      <SelectCustom
+        id='director'
+        label='Director'
+        onChange={e => { setDirectorFilter(e.target.value) }}
+        options={[
+          { value: '', label: 'All' },
+          ...DIRECTORS.map(d => ({ value: d, label: d }))
+        ]}
+        value={directorFilter}
+      />
+    </div>
 
   const renderMovieList = (): ReactElement =>
     <FlexWrapper
@@ -193,8 +243,9 @@ const MoviesContent: FunctionComponent = () => {
               Films
             </TagH>
           </Spacer>
+          { renderControls() }
           <ul className='movies-list'>
-            { MOVIES.map(({ title, year, director, favorite }) => (
+            { displayedMovies.map(({ title, year, director, favorite }) => (
               <li
                 className={`movie-item${favorite ? ' movie-item--favorite' : ''}`}
                 key={title}

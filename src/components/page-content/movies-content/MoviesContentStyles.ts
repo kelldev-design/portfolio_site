@@ -11,6 +11,12 @@ export const MoviesContentStyles = css`
     ${animationFadeOut}
   }
 
+  .movies-controls {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
   .movies-list {
     list-style: none;
     padding: 0;
