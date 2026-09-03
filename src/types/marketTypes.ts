@@ -20,9 +20,17 @@ export interface YieldCurvePoint {
   value: number | null
 }
 
+export interface YieldCurveComparison {
+  key: string
+  label: string
+  date: string
+  points: YieldCurvePoint[]
+}
+
 export interface YieldCurve {
   date: string
   points: YieldCurvePoint[]
+  comparisons: YieldCurveComparison[]
 }
 
 export interface MarketSeriesResponse {

@@ -142,6 +142,15 @@ export const GET_YIELD_CURVE = gql`
         months
         value
       }
+      comparisons {
+        key
+        label
+        date
+        points {
+          fredId
+          value
+        }
+      }
     }
   }
 `
