@@ -108,3 +108,40 @@ export const CREATE_PORTFOLIO_ITEMS = gql`
     }
   }
 `
+
+export const GET_MARKET_SERIES = gql`
+  query GetMarketSeries($ids: [String!], $from: String) {
+    marketSeries(ids: $ids, from: $from) {
+      fredId
+      label
+      category
+      unit
+      observations {
+        date
+        value
+      }
+      latest {
+        date
+        value
+      }
+      previous {
+        date
+        value
+      }
+    }
+  }
+`
+
+export const GET_YIELD_CURVE = gql`
+  query GetYieldCurve($date: String) {
+    yieldCurve(date: $date) {
+      date
+      points {
+        fredId
+        label
+        months
+        value
+      }
+    }
+  }
+`

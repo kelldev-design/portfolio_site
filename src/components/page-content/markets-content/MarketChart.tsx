@@ -1,0 +1,424 @@
+import { type FunctionComponent, type ReactElement, useMemo } from 'react'
+import {
+  Area,
+  CartesianGrid,
+  ComposedChart,
+  LabelList,
+  Line,
+  ReferenceArea,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
+} from 'recharts'
+import styled from 'styled-components'
+import { MarketChartStyles } from './MarketChartStyles'
+import { formatValue } from './marketsConfig'
+import {
+  type ChartRow,
+  type ChartSeriesConfig
+} from '../../../types/marketTypes'
+import {
+  CHART_BAND,
+  CHART_GRID,
+  GREY2,
+  GREY3
+} from '../../../utils/constants/colors'
+import { useIsSmallScreen } from '../../hooks/useIsSmallScreen'
+
+const MarketChartStyled = styled.div`${MarketChartStyles}`
+
+export interface BandConfig {
+  color: string
+  dataKey: string
+  label: string
+}
+
+interface MarketChartProps {
+  band?: BandConfig
+  data: ChartRow[]
+  height?: number
+  series: ChartSeriesConfig[]
+  shadeBelowZero?: boolean
+  showZeroLine?: boolean
+  valueDigits?: number
+  valueSuffix?: string
+  xAxisKey: string
+  xIsNumeric?: boolean
+  xTickFormatter: (value: string | number) => string
+  xTicks?: number[]
+  xTooltipFormatter: (value: string | number) => string
+}
+
+interface TooltipPayloadItem {
+  dataKey?: string | number
+  value?: number | number[]
+}
+
+interface ChartTooltipProps {
+  active?: boolean
+  band?: BandConfig
+  label?: string | number
+  payload?: TooltipPayloadItem[]
+  series?: ChartSeriesConfig[]
+  valueDigits?: number
+  valueSuffix?: string
+  xTooltipFormatter?: (value: string | number) => string
+}
+
+interface EndLabelProps {
+  color?: string
+  index?: number
+  lastIndex?: number
+  text?: string
+  viewBox?: { x?: number, y?: number }
+  x?: number
+  y?: number
+}
+
+const toNumber = (value: number | string | null | undefined): number | null =>
+  typeof value === 'number' && !isNaN(value) ? value : null
+
+const ChartTooltip: FunctionComponent<ChartTooltipProps> = ({
+  active,
+  band,
+  label,
+  payload,
+  series = [],
+  valueDigits = 2,
+  valueSuffix = '%',
+  xTooltipFormatter
+}) => {
+  if (!active || !payload?.length) return null
+
+  const valueByKey: Record<string, number | number[]> = {}
+
+  payload.forEach(item => {
+    if (item.dataKey !== undefined && item.value !== undefined) valueByKey[String(item.dataKey)] = item.value
+  })
+
+  const bandValue = band ? valueByKey[band.dataKey] : undefined
+
+  return (
+    <div className='chart-tooltip'>
+      <div className='chart-tooltip-date'>
+        { xTooltipFormatter && label !== undefined ? xTooltipFormatter(label) : label }
+      </div>
+      { band && Array.isArray(bandValue) && (
+        <div className='chart-tooltip-row'>
+          <span
+            className='chart-tooltip-swatch'
+            style={{ backgroundColor: band.color }}
+          />
+          <span>{ band.label }</span>
+          <span className='chart-tooltip-value'>
+            { `${formatValue(
+              bandValue[0],
+              valueDigits
+            )}–${formatValue(
+              bandValue[1],
+              valueDigits
+            )}${valueSuffix}` }
+          </span>
+        </div>
+      ) }
+      { series.map(({ color, fredId, label: seriesLabel }) => {
+        const value = valueByKey[fredId]
+
+        if (Array.isArray(value)) return null
+
+        return (
+          <div
+            className='chart-tooltip-row'
+            key={fredId}
+          >
+            <span
+              className='chart-tooltip-swatch'
+              style={{ backgroundColor: color }}
+            />
+            <span>{ seriesLabel }</span>
+            <span className='chart-tooltip-value'>
+              { `${formatValue(
+                value,
+                valueDigits
+              )}${valueSuffix}` }
+            </span>
+          </div>
+        )
+      }) }
+    </div>
+  )
+}
+
+/* Direct end-of-line label: ink text plus a small colour swatch, drawn on the last point only. */
+const EndLabel: FunctionComponent<EndLabelProps> = ({
+  color,
+  index,
+  lastIndex,
+  text,
+  viewBox,
+  x,
+  y
+}) => {
+  if (index !== lastIndex) return null
+
+  const pointX = x ?? viewBox?.x ?? 0
+  const pointY = y ?? viewBox?.y ?? 0
+
+  return (
+    <g>
+      <rect
+        fill={color}
+        height={3}
+        rx={1.5}
+        width={10}
+        x={pointX + 5}
+        y={pointY - 1.5}
+      />
+      <text
+        dy={4}
+        fill={GREY2}
+        fontSize={11}
+        x={pointX + 19}
+        y={pointY}
+      >
+        { text }
+      </text>
+    </g>
+  )
+}
+
+export const MarketChart: FunctionComponent<MarketChartProps> = ({
+  band,
+  data,
+  height,
+  series,
+  shadeBelowZero,
+  showZeroLine,
+  valueDigits = 2,
+  valueSuffix = '%',
+  xAxisKey,
+  xIsNumeric,
+  xTickFormatter,
+  xTicks,
+  xTooltipFormatter
+}) => {
+  const isSmallScreen = useIsSmallScreen()
+  const chartHeight = height ?? (isSmallScreen ? 240 : 320)
+
+  /* The gutter has to fit the longest direct end-of-line label, swatch included. */
+  const longestLabel = series.reduce(
+    (
+      longest,
+      { label, shortLabel }
+    ) => Math.max(
+      longest,
+      (shortLabel ?? label).length
+    ),
+    0
+  )
+  const rightMargin = Math.min(
+    100,
+    Math.max(
+      40,
+      Math.round(longestLabel * 6.4) + 26
+    )
+  )
+
+  const lastIndexByKey = useMemo(
+    () => {
+      const lastIndexes: Record<string, number> = {}
+
+      series.forEach(({ fredId }) => {
+        lastIndexes[fredId] = -1
+
+        data.forEach((
+          row,
+          rowIndex
+        ) => {
+          if (toNumber(row[fredId] as number | string | null) !== null) lastIndexes[fredId] = rowIndex
+        })
+      })
+
+      return lastIndexes
+    },
+    [ data, series ]
+  )
+
+  const minValue = useMemo(
+    () => {
+      const values: number[] = []
+
+      data.forEach(row => {
+        series.forEach(({ fredId }) => {
+          const value = toNumber(row[fredId] as number | string | null)
+
+          if (value !== null) values.push(value)
+        })
+      })
+
+      return values.length ? Math.min(...values) : 0
+    },
+    [ data, series ]
+  )
+
+  const renderLegend = (): ReactElement =>
+    <ul className='chart-legend'>
+      { band && (
+        <li
+          className='chart-legend-item'
+          key={band.dataKey}
+        >
+          <span
+            className='chart-legend-swatch chart-legend-swatch--band'
+            style={{ backgroundColor: band.color }}
+          />
+          { band.label }
+        </li>
+      ) }
+      { series.map(({ color, fredId, label }) => (
+        <li
+          className='chart-legend-item'
+          key={fredId}
+        >
+          <span
+            className='chart-legend-swatch'
+            style={{ backgroundColor: color }}
+          />
+          { label }
+        </li>
+      )) }
+    </ul>
+
+  return (
+    <MarketChartStyled>
+      { renderLegend() }
+      <div className='chart-canvas'>
+        <ResponsiveContainer
+          height={chartHeight}
+          width='100%'
+        >
+          <ComposedChart
+            data={data}
+            margin={{
+              top: 10,
+              right: rightMargin,
+              bottom: 0,
+              left: 0
+            }}
+          >
+            <CartesianGrid
+              stroke={CHART_GRID}
+              strokeWidth={1}
+              vertical={false}
+            />
+            <XAxis
+              axisLine={{ stroke: CHART_GRID }}
+              dataKey={xAxisKey}
+              domain={xIsNumeric ? [ 1, 360 ] : undefined}
+              minTickGap={isSmallScreen ? 44 : 28}
+              scale={xIsNumeric ? 'log' : 'auto'}
+              tick={{ fill: GREY3, fontSize: 11 }}
+              tickFormatter={xTickFormatter}
+              tickLine={false}
+              ticks={xTicks}
+              type={xIsNumeric ? 'number' : 'category'}
+            />
+            <YAxis
+              axisLine={false}
+              domain={[
+                (dataMin: number) => Number((dataMin - 0.15).toFixed(2)),
+                (dataMax: number) => Number((dataMax + 0.15).toFixed(2))
+              ]}
+              tick={{ fill: GREY3, fontSize: 11 }}
+              tickFormatter={value => `${Number(value).toFixed(1)}${valueSuffix}`}
+              tickLine={false}
+              width={isSmallScreen ? 42 : 52}
+            />
+            <Tooltip
+              content={
+                <ChartTooltip
+                  band={band}
+                  series={series}
+                  valueDigits={valueDigits}
+                  valueSuffix={valueSuffix}
+                  xTooltipFormatter={xTooltipFormatter}
+                />
+              }
+              cursor={{
+                stroke: GREY3,
+                strokeDasharray: '3 3',
+                strokeWidth: 1
+              }}
+            />
+            { shadeBelowZero && (
+              <ReferenceArea
+                fill={CHART_BAND}
+                fillOpacity={1}
+                ifOverflow='extendDomain'
+                stroke='none'
+                y1={Math.min(
+                  minValue - 0.15,
+                  0
+                )}
+                y2={0}
+              />
+            ) }
+            { showZeroLine && (
+              <ReferenceLine
+                stroke={GREY3}
+                strokeWidth={1}
+                y={0}
+              />
+            ) }
+            { band && (
+              <Area
+                connectNulls
+                dataKey={band.dataKey}
+                fill={band.color}
+                fillOpacity={1}
+                isAnimationActive={false}
+                stroke='none'
+              />
+            ) }
+            { series.map(({
+              color,
+              fredId,
+              label,
+              shortLabel
+            }) => (
+              <Line
+                activeDot={{
+                  fill: color,
+                  r: 4,
+                  stroke: '#fff',
+                  strokeWidth: 2
+                }}
+                connectNulls
+                dataKey={fredId}
+                dot={false}
+                isAnimationActive={false}
+                key={fredId}
+                stroke={color}
+                strokeWidth={2}
+                type='monotone'
+              >
+                <LabelList
+                  content={
+                    <EndLabel
+                      color={color}
+                      lastIndex={lastIndexByKey[fredId]}
+                      text={shortLabel ?? label}
+                    />
+                  }
+                  dataKey={fredId}
+                />
+              </Line>
+            )) }
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+    </MarketChartStyled>
+  )
+}
