@@ -11,5 +11,11 @@ export const SERIES2 = '#eb6834'
 export const SERIES3 = '#1baf7a'
 export const SERIES4 = '#eda100'
 export const SERIES5 = '#8e44ad'
+
+/* Status colours. Reserved for state; never reused as a chart series.
+   All three clear 4.5:1 against the white card surface. */
+export const STATUS_BAD = '#c0392b'
+export const STATUS_WARN = '#a86000'
+export const STATUS_GOOD = '#1e8449'
 export const CHART_GRID = '#e6e6e6'
 export const CHART_BAND = 'rgba(136, 136, 136, 0.12)'

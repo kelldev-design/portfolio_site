@@ -279,3 +279,14 @@ export const formatAxisDate = (
 
   return showDay ? `${month} ${day}` : `${month} ${year.slice(2)}`
 }
+
+/* Indicators read fixed history windows -- a 200 day average and a one month
+   change must not change meaning when the range selector moves. */
+export const INDICATOR_HISTORY_DAYS = 400
+
+export const INDICATOR_IDS = [
+  'DGS10',
+  'DGS30',
+  'BAMLH0A0HYM2',
+  'SP500'
+]

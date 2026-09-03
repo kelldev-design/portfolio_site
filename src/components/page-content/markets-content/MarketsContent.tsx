@@ -15,6 +15,8 @@ import {
   CURVE_IDS,
   daysAgoDate,
   DEFAULT_RANGE,
+  INDICATOR_HISTORY_DAYS,
+  INDICATOR_IDS,
   MARKET_IDS,
   type RangeKey,
   rangeFromDate,
@@ -24,6 +26,7 @@ import { MarketsContentStyles } from './MarketsContentStyles'
 import { PolicyRatesChart } from './PolicyRatesChart'
 import { RangeSelector } from './RangeSelector'
 import { StatTiles } from './StatTiles'
+import { ThesisIndicators } from './ThesisIndicators'
 import { YieldCurveChart } from './YieldCurveChart'
 import {
   GET_MARKET_SERIES,
@@ -61,6 +64,13 @@ const MarketsContent: FunctionComponent = () => {
     []
   )
 
+  /* Indicators read a fixed window, not the selected range: a 200 day average and a
+     one month change must mean the same thing whatever the range selector says. */
+  const indicatorFrom = useMemo(
+    () => daysAgoDate(INDICATOR_HISTORY_DAYS),
+    []
+  )
+
   const {
     data: marketData,
     error: marketError,
@@ -75,6 +85,11 @@ const MarketsContent: FunctionComponent = () => {
     { variables: { ids: CURVE_IDS, from: curveFrom } }
   )
 
+  const { data: indicatorData } = useQuery(
+    GET_MARKET_SERIES,
+    { variables: { ids: INDICATOR_IDS, from: indicatorFrom } }
+  )
+
   const { data: yieldCurveData } = useQuery(GET_YIELD_CURVE)
 
   const seriesMap: MarketSeriesMap = useMemo(
@@ -85,6 +100,11 @@ const MarketsContent: FunctionComponent = () => {
   const curveHistoryMap: MarketSeriesMap = useMemo(
     () => seriesMapById((curveHistoryData as MarketSeriesResponse | undefined)?.marketSeries ?? []),
     [ curveHistoryData ]
+  )
+
+  const indicatorMap: MarketSeriesMap = useMemo(
+    () => seriesMapById((indicatorData as MarketSeriesResponse | undefined)?.marketSeries ?? []),
+    [ indicatorData ]
   )
 
   const yieldCurve = (yieldCurveData as YieldCurveResponse | undefined)?.yieldCurve
@@ -154,6 +174,7 @@ const MarketsContent: FunctionComponent = () => {
 
   const renderCharts = (): ReactElement =>
     <>
+      { renderSection(renderCard(<ThesisIndicators seriesMap={indicatorMap} />)) }
       { renderSection(renderCard(<StatTiles seriesMap={seriesMap} />)) }
       { renderSection(renderControls()) }
       { renderSection(
