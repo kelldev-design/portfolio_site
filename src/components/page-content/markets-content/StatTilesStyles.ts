@@ -1,6 +1,7 @@
 import { css } from 'styled-components'
 import { XSMALL_MAX } from '../../../utils/constants/breakpoints'
 import {
+  CHART_GRID,
   GREY2,
   GREY3,
   TEXT1
@@ -13,7 +14,7 @@ export const StatTilesStyles = css`
   width: 100%;
 
   .stat-tile {
-    border-left: 2px solid #e6e6e6;
+    border-left: 2px solid ${CHART_GRID};
     padding-left: 12px;
   }
 

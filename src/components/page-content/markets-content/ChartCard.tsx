@@ -8,8 +8,8 @@ import { Spacer } from '../../layout/spacer/Spacer'
 const ChartCardStyled = styled.div`${ChartCardStyles}`
 
 interface ChartCardProps {
-  description: string
-  title: string
+  description?: string
+  title?: string
   children: ReactNode
 }
 
@@ -31,14 +31,20 @@ export const ChartCard: FunctionComponent<ChartCardProps> = ({
     >
       <FlexWrapper flexColumn>
         <ChartCardStyled>
-          <div className='chart-card-heading'>
-            <TagH size={2}>
-              { title }
-            </TagH>
-          </div>
-          <p className='chart-card-description'>
-            { description }
-          </p>
+          {
+            title !== undefined &&
+              <div className='chart-card-heading'>
+                <TagH size={2}>
+                  { title }
+                </TagH>
+              </div>
+          }
+          {
+            description !== undefined &&
+              <p className='chart-card-description'>
+                { description }
+              </p>
+          }
           { children }
         </ChartCardStyled>
       </FlexWrapper>

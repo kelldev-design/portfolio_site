@@ -1,8 +1,10 @@
 import { css } from 'styled-components'
 import { XSMALL_MAX } from '../../../utils/constants/breakpoints'
 import {
+  CHART_GRID,
   GREY2,
-  GREY3
+  GREY3,
+  GREY4
 } from '../../../utils/constants/colors'
 
 export const MarketChartStyles = css`
@@ -44,9 +46,9 @@ export const MarketChartStyles = css`
 
   .chart-tooltip {
     background-color: #fff;
-    border: 1px solid #e6e6e6;
+    border: 1px solid ${CHART_GRID};
     border-radius: 4px;
-    box-shadow: 0px 0px 6px rgba(136, 136, 136, 0.5);
+    box-shadow: 0px 0px 6px ${GREY4};
     padding: 8px 10px;
     min-width: 140px;
   }

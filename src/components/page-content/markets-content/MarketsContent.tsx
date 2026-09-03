@@ -7,6 +7,7 @@ import {
 } from 'react'
 import { useQuery } from '@apollo/client'
 import styled from 'styled-components'
+import { ChartCard } from './ChartCard'
 import { CurveSpreadsChart } from './CurveSpreadsChart'
 import { InflationRatesChart } from './InflationRatesChart'
 import { KeyTenorsChart } from './KeyTenorsChart'
@@ -37,7 +38,6 @@ import { LoadingContent } from '../../common/loading-content/LoadingContent'
 import { TagH } from '../../common/tag-h/TagH'
 import { TagP } from '../../common/tag-p/TagP'
 import { Container } from '../../layout/container/Container'
-import { FlexWrapper } from '../../layout/flex-wrapper/FlexWrapper'
 import { PageRow } from '../../layout/page-row/PageRow'
 import { Spacer } from '../../layout/spacer/Spacer'
 import { PortfolioContext } from '../../wrappers/PortfolioContextProvider'
@@ -90,22 +90,9 @@ const MarketsContent: FunctionComponent = () => {
   const yieldCurve = (yieldCurveData as YieldCurveResponse | undefined)?.yieldCurve
 
   const renderCard = (children: ReactElement): ReactElement =>
-    <FlexWrapper
-      backgroundColor='#fff'
-      hasShadow
-    >
-      <Spacer
-        b={2.5}
-        isFlex
-        l={2.5}
-        r={2.5}
-        t={2.5}
-      >
-        <FlexWrapper flexColumn>
-          { children }
-        </FlexWrapper>
-      </Spacer>
-    </FlexWrapper>
+    <ChartCard>
+      { children }
+    </ChartCard>
 
   const renderIntro = (): ReactElement => renderCard(
     <>

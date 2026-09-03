@@ -1,6 +1,7 @@
 import { css } from 'styled-components'
 import { XSMALL_MAX } from '../../../utils/constants/breakpoints'
 import {
+  CHART_GRID,
   GREY2,
   GREY3,
   LINK1
@@ -20,7 +21,7 @@ export const RangeSelectorStyles = css`
 
   .range-button {
     background: none;
-    border: 1px solid #e6e6e6;
+    border: 1px solid ${CHART_GRID};
     border-radius: 4px;
     color: ${GREY2};
     cursor: pointer;
