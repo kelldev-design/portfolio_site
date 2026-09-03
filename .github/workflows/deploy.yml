@@ -1,0 +1,66 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  S3_BUCKET: kelldev.design
+  CLOUDFRONT_DISTRIBUTION_ID: E310RTA2TDL598
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Inert until deploy/terraform/ has been applied and the AWS_DEPLOY_ROLE_ARN
+    # repo variable is set from its output. Activating deploys requires no change
+    # to this workflow.
+    if: vars.AWS_DEPLOY_ROLE_ARN != ''
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # `vite build` defaults to production mode, so .env.production supplies
+      # VITE_PORTFOIO_API_URL at build time.
+      - name: Build
+        run: npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Sync to S3
+        run: |
+          set -euo pipefail
+          aws s3 sync dist/ "s3://${S3_BUCKET}" --delete
+
+      - name: Invalidate CloudFront cache
+        run: |
+          set -euo pipefail
+          invalidation_id=$(aws cloudfront create-invalidation \
+            --distribution-id "${CLOUDFRONT_DISTRIBUTION_ID}" \
+            --paths '/*' \
+            --query 'Invalidation.Id' \
+            --output text)
+          echo "Invalidation: ${invalidation_id}"
+          aws cloudfront wait invalidation-completed \
+            --distribution-id "${CLOUDFRONT_DISTRIBUTION_ID}" \
+            --id "${invalidation_id}"
