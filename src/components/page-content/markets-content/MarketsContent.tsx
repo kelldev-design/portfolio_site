@@ -176,13 +176,13 @@ const MarketsContent: FunctionComponent = () => {
     <>
       { renderSection(renderCard(<ThesisIndicators seriesMap={indicatorMap} />)) }
       { renderSection(renderCard(<StatTiles seriesMap={seriesMap} />)) }
-      { renderSection(renderControls()) }
       { renderSection(
         <YieldCurveChart
           curve={yieldCurve}
           curveHistory={curveHistoryMap}
         />
       ) }
+      { renderSection(renderControls()) }
       { renderSection(
         <KeyTenorsChart
           range={range}
