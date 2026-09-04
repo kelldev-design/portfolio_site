@@ -11,9 +11,12 @@ terraform {
   # Same state bucket and lock table as the portfolio_api module, different key
   # so the two states do not collide.
   backend "s3" {
-    bucket         = "kelldev-portfolio-tfstate-003149845291"
-    key            = "portfolio-site/terraform.tfstate"
-    region         = "us-east-1"
+    bucket = "kelldev-portfolio-tfstate-003149845291"
+    key    = "portfolio-site/terraform.tfstate"
+    region = "us-east-1"
+    # Backends cannot read variables, so the admin profile is named literally here.
+    # Without it, state access falls through to the default credential chain.
+    profile        = "kelldev-mgmt"
     dynamodb_table = "kelldev-portfolio-tflock"
     encrypt        = true
   }

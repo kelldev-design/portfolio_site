@@ -289,6 +289,42 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
     [ data, drawnSeries ]
   )
 
+  /* Toggleable legends swap the plain swatch for a checkbox that draws or hides the line. */
+  const renderLegendEntry = ({
+    color,
+    fredId,
+    label
+  }: ChartSeriesConfig): ReactElement => {
+    if (!toggleableSeries) {
+      return (
+        <>
+          <span
+            className='chart-legend-swatch'
+            style={{ backgroundColor: color }}
+          />
+          { label }
+        </>
+      )
+    }
+
+    return (
+      <label className={`chart-legend-toggle${hiddenKeys[fredId] ? ' chart-legend-toggle--off' : ''}`}>
+        <input
+          checked={!hiddenKeys[fredId]}
+          className='chart-legend-checkbox'
+          onChange={() => { toggleSeries(fredId) }}
+          style={{ accentColor: color }}
+          type='checkbox'
+        />
+        <span
+          className='chart-legend-swatch'
+          style={{ backgroundColor: color }}
+        />
+        { label }
+      </label>
+    )
+  }
+
   const renderLegend = (): ReactElement =>
     <ul className='chart-legend'>
       { band && (
@@ -303,33 +339,12 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
           { band.label }
         </li>
       ) }
-      { series.map(({ color, fredId, label }) => (
+      { series.map(seriesConfig => (
         <li
           className='chart-legend-item'
-          key={fredId}
+          key={seriesConfig.fredId}
         >
-          { toggleableSeries
-            ? <label className={`chart-legend-toggle${hiddenKeys[fredId] ? ' chart-legend-toggle--off' : ''}`}>
-              <input
-                checked={!hiddenKeys[fredId]}
-                className='chart-legend-checkbox'
-                onChange={() => { toggleSeries(fredId) }}
-                style={{ accentColor: color }}
-                type='checkbox'
-              />
-              <span
-                className='chart-legend-swatch'
-                style={{ backgroundColor: color }}
-              />
-              { label }
-            </label>
-            : <>
-              <span
-                className='chart-legend-swatch'
-                style={{ backgroundColor: color }}
-              />
-              { label }
-            </> }
+          { renderLegendEntry(seriesConfig) }
         </li>
       )) }
     </ul>

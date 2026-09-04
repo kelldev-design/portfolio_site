@@ -5,7 +5,7 @@ variable "region" {
 }
 
 variable "aws_profile" {
-  description = "AdministratorAccess profile in account 003149845291. The `default` profile is the scoped portfolio-site-deploy user and cannot apply this."
+  description = "AdministratorAccess profile in account 003149845291. Also named in the backend block, which cannot read variables."
   type        = string
   default     = "kelldev-mgmt"
 }

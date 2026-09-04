@@ -26,9 +26,11 @@ That is the whole module. Nothing else is managed here.
 - The state bucket `kelldev-portfolio-tfstate-003149845291` and lock table
   `kelldev-portfolio-tflock` exist (created by `portfolio_api`'s module).
 - The OIDC provider above exists.
-- An AWS profile with AdministratorAccess in account `003149845291`. The default is
-  `kelldev-mgmt`. The `default` profile is the scoped `portfolio-site-deploy` user
-  and cannot apply this module.
+- An AWS profile with AdministratorAccess in account `003149845291`: `kelldev-mgmt`,
+  named both by `var.aws_profile` (for the provider) and literally in the `backend "s3"`
+  block, since backends cannot read variables. Sign in with
+  `aws sso login --profile kelldev-mgmt` before applying. The scoped
+  `portfolio-site-deploy` user is S3/CloudFront-only and cannot apply this module.
 
 ## Apply
 
