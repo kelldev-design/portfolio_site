@@ -1,7 +1,12 @@
 name: deploy
 
+# Deploys are gated on ci.yml: a red lint/typecheck/build on main must not ship.
+# workflow_run fires after that workflow finishes, so the conclusion is checked
+# below and the run is pinned to the exact commit ci verified.
 on:
-  push:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
@@ -24,9 +29,16 @@ jobs:
     # Inert until deploy/terraform/ has been applied and the AWS_DEPLOY_ROLE_ARN
     # repo variable is set from its output. Activating deploys requires no change
     # to this workflow.
-    if: vars.AWS_DEPLOY_ROLE_ARN != ''
+    if: >-
+      vars.AWS_DEPLOY_ROLE_ARN != '' &&
+      (github.event_name == 'workflow_dispatch' ||
+       github.event.workflow_run.conclusion == 'success')
     steps:
       - uses: actions/checkout@v4
+        with:
+          # workflow_run runs against the default branch by default; check out the
+          # commit ci actually verified.
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
       - uses: actions/setup-node@v4
         with:

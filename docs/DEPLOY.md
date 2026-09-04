@@ -17,9 +17,13 @@ AWS account `003149845291`, region `us-east-1`.
 
 ## Deploying
 
-Push to `main`. `.github/workflows/deploy.yml` then:
+Push to `main`. That runs `.github/workflows/ci.yml`; only if it succeeds does
+`.github/workflows/deploy.yml` start, via a `workflow_run` trigger. A red lint,
+typecheck or build therefore blocks the deploy rather than racing it. The deploy
+then:
 
-1. checks out and builds with Node 20,
+1. checks out the exact commit ci verified (`workflow_run.head_sha`) and builds
+   with Node 20,
 2. assumes the `portfolio-site-github-deploy` IAM role via GitHub OIDC (no stored
    AWS keys),
 3. runs `aws s3 sync dist/ s3://kelldev.design --delete`,
@@ -28,7 +32,7 @@ Push to `main`. `.github/workflows/deploy.yml` then:
 
 Deploys are serialised by the `deploy-production` concurrency group and are not
 cancelled in flight. The workflow can also be run manually via
-`workflow_dispatch`.
+`workflow_dispatch`, which bypasses the ci gate and deploys the default branch.
 
 Pull requests and pushes to `main` additionally run `.github/workflows/ci.yml`:
 lint (eslint without `--fix`), typecheck (`tsc --noEmit`), and build.
