@@ -18,7 +18,7 @@ const ThesisIndicatorsStyled = styled.div`${ThesisIndicatorsStyles}`
    colour, so the reading never depends on colour alone. */
 type Status = 'bad' | 'warn' | 'good'
 
-const STATUS_META: Record<Status, { color: string; label: string }> = {
+const STATUS_META: Record<Status, { color: string, label: string }> = {
   bad: {
     color: STATUS_BAD,
     label: 'Confirming'
@@ -65,7 +65,10 @@ const movingAverage = (series: MarketSeries | undefined, days: number): number |
 
   if (values.length < days / 2) return null
 
-  return values.reduce((total, { value }) => total + value, 0) / values.length
+  return values.reduce(
+    (total, { value }) => total + value,
+    0
+  ) / values.length
 }
 
 const daysAgoIso = (days: number): string => {
@@ -73,7 +76,10 @@ const daysAgoIso = (days: number): string => {
 
   date.setDate(date.getDate() - days)
 
-  return date.toISOString().slice(0, 10)
+  return date.toISOString().slice(
+    0,
+    10
+  )
 }
 
 /* Threshold bands. Each level is the user's own trigger, kept in one place so they are
