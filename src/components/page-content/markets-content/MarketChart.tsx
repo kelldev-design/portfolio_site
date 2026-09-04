@@ -1,4 +1,9 @@
-import { type FunctionComponent, type ReactElement, useMemo } from 'react'
+import {
+  type FunctionComponent,
+  type ReactElement,
+  useMemo,
+  useState
+} from 'react'
 import {
   Area,
   CartesianGrid,
@@ -42,6 +47,7 @@ interface MarketChartProps {
   series: ChartSeriesConfig[]
   shadeBelowZero?: boolean
   showZeroLine?: boolean
+  toggleableSeries?: boolean
   valueDigits?: number
   valueSuffix?: string
   xAxisKey: string
@@ -196,6 +202,7 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
   series,
   shadeBelowZero,
   showZeroLine,
+  toggleableSeries,
   valueDigits = 2,
   valueSuffix = '%',
   xAxisKey,
@@ -206,9 +213,28 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
 }) => {
   const isSmallScreen = useIsSmallScreen()
   const chartHeight = height ?? (isSmallScreen ? 240 : 320)
+  const [ hiddenKeys, setHiddenKeys ] = useState<Record<string, boolean>>({})
+
+  /* Only the drawn series feed the lines, labels, tooltip and domain; the legend keeps
+     every entry so a hidden one can be switched back on. */
+  const drawnSeries = useMemo(
+    () => (toggleableSeries ? series.filter(({ fredId }) => !hiddenKeys[fredId]) : series),
+    [
+      hiddenKeys,
+      series,
+      toggleableSeries
+    ]
+  )
+
+  const toggleSeries = (fredId: string): void => {
+    setHiddenKeys(hidden => ({
+      ...hidden,
+      [fredId]: !hidden[fredId]
+    }))
+  }
 
   /* The gutter has to fit the longest direct end-of-line label, swatch included. */
-  const longestLabel = series.reduce(
+  const longestLabel = drawnSeries.reduce(
     (
       longest,
       { label, shortLabel }
@@ -230,7 +256,7 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
     () => {
       const lastIndexes: Record<string, number> = {}
 
-      series.forEach(({ fredId }) => {
+      drawnSeries.forEach(({ fredId }) => {
         lastIndexes[fredId] = -1
 
         data.forEach((
@@ -243,7 +269,7 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
 
       return lastIndexes
     },
-    [ data, series ]
+    [ data, drawnSeries ]
   )
 
   const minValue = useMemo(
@@ -251,7 +277,7 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
       const values: number[] = []
 
       data.forEach(row => {
-        series.forEach(({ fredId }) => {
+        drawnSeries.forEach(({ fredId }) => {
           const value = toNumber(row[fredId] as number | string | null)
 
           if (value !== null) values.push(value)
@@ -260,7 +286,7 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
 
       return values.length ? Math.min(...values) : 0
     },
-    [ data, series ]
+    [ data, drawnSeries ]
   )
 
   const renderLegend = (): ReactElement =>
@@ -282,11 +308,28 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
           className='chart-legend-item'
           key={fredId}
         >
-          <span
-            className='chart-legend-swatch'
-            style={{ backgroundColor: color }}
-          />
-          { label }
+          { toggleableSeries
+            ? <label className={`chart-legend-toggle${hiddenKeys[fredId] ? ' chart-legend-toggle--off' : ''}`}>
+              <input
+                checked={!hiddenKeys[fredId]}
+                className='chart-legend-checkbox'
+                onChange={() => { toggleSeries(fredId) }}
+                style={{ accentColor: color }}
+                type='checkbox'
+              />
+              <span
+                className='chart-legend-swatch'
+                style={{ backgroundColor: color }}
+              />
+              { label }
+            </label>
+            : <>
+              <span
+                className='chart-legend-swatch'
+                style={{ backgroundColor: color }}
+              />
+              { label }
+            </> }
         </li>
       )) }
     </ul>
@@ -340,7 +383,7 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
               content={
                 <ChartTooltip
                   band={band}
-                  series={series}
+                  series={drawnSeries}
                   valueDigits={valueDigits}
                   valueSuffix={valueSuffix}
                   xTooltipFormatter={xTooltipFormatter}
@@ -382,7 +425,7 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
                 stroke='none'
               />
             ) }
-            { series.map(({
+            { drawnSeries.map(({
               color,
               fredId,
               label,

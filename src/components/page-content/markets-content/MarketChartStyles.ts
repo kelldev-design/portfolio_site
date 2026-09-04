@@ -27,6 +27,29 @@ export const MarketChartStyles = css`
     font-size: 12px;
   }
 
+  .chart-legend-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+
+  .chart-legend-toggle.chart-legend-toggle--off {
+    color: ${GREY3};
+
+    .chart-legend-swatch {
+      opacity: 0.4;
+    }
+  }
+
+  .chart-legend-checkbox {
+    width: 13px;
+    height: 13px;
+    margin: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
   .chart-legend-swatch {
     display: inline-block;
     width: 12px;

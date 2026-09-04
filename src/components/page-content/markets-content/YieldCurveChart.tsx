@@ -168,6 +168,7 @@ export const YieldCurveChart: FunctionComponent<YieldCurveChartProps> = ({
         <MarketChart
           data={data}
           series={series}
+          toggleableSeries
           xAxisKey='months'
           xIsNumeric
           xTickFormatter={value => tenorLabel(Number(value))}
