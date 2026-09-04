@@ -36,6 +36,9 @@ export const PortfolioGridItem: FunctionComponent<PortfolioGridItemPropsType> = 
       </div>
     </PortfolioGridItemStyled>
   ),
+  // `rest` is a fresh object on every render, so including it would defeat the
+  // memo entirely. Deliberately omitted.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   [
     homeImage,
     projectId,
