@@ -248,6 +248,44 @@ export const formatValue = (
   return value.toFixed(digits)
 }
 
+/* Mixes two #rrggbb colours in RGB. Used to ramp a dated set of lines from one end
+   of the palette to the other, so age reads as hue rather than as fading ink. */
+export const mixHexColors = (
+  fromHex: string,
+  toHex: string,
+  ratio: number
+): string => {
+  const channels = [
+    1,
+    3,
+    5
+  ].map(offset => {
+    const from = parseInt(
+      fromHex.slice(
+        offset,
+        offset + 2
+      ),
+      16
+    )
+    const to = parseInt(
+      toHex.slice(
+        offset,
+        offset + 2
+      ),
+      16
+    )
+
+    return Math.round(from + ((to - from) * ratio))
+      .toString(16)
+      .padStart(
+        2,
+        '0'
+      )
+  })
+
+  return `#${channels.join('')}`
+}
+
 export const formatSignedValue = (value: number): string => `${value > 0 ? '+' : ''}${value.toFixed(2)}`
 
 export const formatShortDate = (isoDate: string): string => {

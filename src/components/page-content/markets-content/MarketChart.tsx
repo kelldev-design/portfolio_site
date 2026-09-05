@@ -44,14 +44,14 @@ export interface BandConfig {
 }
 
 export interface TrailStep {
+  color: string
   dataKey: string
   date: string
-  opacity: number
 }
 
-/* A single legend entry standing for many faint dated lines of the same series. */
+/* A single legend entry standing for many dated lines of the same series, each
+   drawn in its own colour along a ramp from the oldest day to the newest. */
 export interface TrailConfig {
-  color: string
   label: string
   steps: TrailStep[]
 }
@@ -161,7 +161,7 @@ const ChartTooltip: FunctionComponent<ChartTooltipProps> = ({
           </span>
         </div>
       ) }
-      { trailEnds.map(({ dataKey, date }) => {
+      { trailEnds.map(({ color, dataKey, date }) => {
         const value = valueByKey[dataKey]
 
         if (Array.isArray(value)) return null
@@ -173,7 +173,7 @@ const ChartTooltip: FunctionComponent<ChartTooltipProps> = ({
           >
             <span
               className='chart-tooltip-swatch'
-              style={{ backgroundColor: trail?.color }}
+              style={{ backgroundColor: color }}
             />
             <span>{ formatShortDate(date) }</span>
             <span className='chart-tooltip-value'>
@@ -294,6 +294,9 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
        switches it off rather than stacking the two readings of the same data. */
     if (hiddenKeys[fredId]) setIsTrailShown(false)
   }
+
+  const trailOldestColor = trail?.steps[0]?.color ?? GREY3
+  const trailNewestColor = trail?.steps[trail.steps.length - 1]?.color ?? GREY3
 
   const toggleTrail = (): void => {
     const isShown = !isTrailShown
@@ -429,12 +432,12 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
               checked={isTrailShown}
               className='chart-legend-checkbox'
               onChange={toggleTrail}
-              style={{ accentColor: trail.color }}
+              style={{ accentColor: trailNewestColor }}
               type='checkbox'
             />
             <span
               className='chart-legend-swatch chart-legend-swatch--trail'
-              style={{ backgroundImage: `linear-gradient(to right, ${trail.color}1f, ${trail.color})` }}
+              style={{ backgroundImage: `linear-gradient(to right, ${trailOldestColor}, ${trailNewestColor})` }}
             />
             { trail.label }
           </label>
@@ -535,7 +538,7 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
                 stroke='none'
               />
             ) }
-            { isTrailShown && trail?.steps.map(({ dataKey, opacity }) => (
+            { isTrailShown && trail?.steps.map(({ color, dataKey }) => (
               <Line
                 activeDot={false}
                 connectNulls
@@ -543,8 +546,7 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
                 dot={false}
                 isAnimationActive={false}
                 key={dataKey}
-                stroke={trail.color}
-                strokeOpacity={opacity}
+                stroke={color}
                 strokeWidth={1.5}
                 type='monotone'
               />

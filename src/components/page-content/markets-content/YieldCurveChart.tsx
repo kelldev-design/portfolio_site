@@ -9,6 +9,7 @@ import {
   CURVE_IDS,
   daysAgoDate,
   formatShortDate,
+  mixHexColors,
   TENOR_MONTHS,
   TENOR_TICKS,
   tenorLabel
@@ -34,10 +35,10 @@ const YieldCurveChartStyled = styled.div`${YieldCurveChartStyles}`
 
 const TRAIL_DAYS = 30
 
-/* Faintest for the oldest day, near solid for the most recent, so the drift reads as
-   a direction rather than a tangle. */
-const TRAIL_MIN_OPACITY = 0.12
-const TRAIL_MAX_OPACITY = 0.9
+/* The oldest day is drawn warm and the most recent cool, so the curve's drift over the
+   window reads as a direction rather than a tangle. */
+const TRAIL_OLDEST_COLOR = SERIES2
+const TRAIL_NEWEST_COLOR = SERIES1
 
 const SMALL_SCREEN_TICKS = [
   1,
@@ -202,17 +203,18 @@ export const YieldCurveChart: FunctionComponent<YieldCurveChartProps> = ({
   ]
 
   const trail: TrailConfig = {
-    color: SERIES1,
     label: `Last ${TRAIL_DAYS} days`,
     steps: trailDates.map((
       date,
       index
     ) => ({
+      color: mixHexColors(
+        TRAIL_OLDEST_COLOR,
+        TRAIL_NEWEST_COLOR,
+        trailDates.length > 1 ? index / (trailDates.length - 1) : 1
+      ),
       dataKey: `trail${index}`,
-      date,
-      opacity: trailDates.length > 1
-        ? TRAIL_MIN_OPACITY + ((TRAIL_MAX_OPACITY - TRAIL_MIN_OPACITY) * index) / (trailDates.length - 1)
-        : TRAIL_MAX_OPACITY
+      date
     }))
   }
 
