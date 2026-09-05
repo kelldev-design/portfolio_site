@@ -50,8 +50,10 @@ export interface TrailStep {
 }
 
 /* A single legend entry standing for many dated lines of the same series, each
-   drawn in its own colour along a ramp from the oldest day to the newest. */
+   drawn in its own colour along a ramp from the oldest reading to the newest.
+   Trails are mutually exclusive with each other and with the dated series. */
 export interface TrailConfig {
+  key: string
   label: string
   steps: TrailStep[]
 }
@@ -64,7 +66,7 @@ interface MarketChartProps {
   shadeBelowZero?: boolean
   showZeroLine?: boolean
   toggleableSeries?: boolean
-  trail?: TrailConfig
+  trails?: TrailConfig[]
   valueDigits?: number
   valueSuffix?: string
   xAxisKey: string
@@ -82,7 +84,6 @@ interface TooltipPayloadItem {
 interface ChartTooltipProps {
   active?: boolean
   band?: BandConfig
-  isTrailShown?: boolean
   label?: string | number
   payload?: TooltipPayloadItem[]
   series?: ChartSeriesConfig[]
@@ -108,7 +109,6 @@ const toNumber = (value: number | string | null | undefined): number | null =>
 const ChartTooltip: FunctionComponent<ChartTooltipProps> = ({
   active,
   band,
-  isTrailShown,
   label,
   payload,
   series = [],
@@ -127,8 +127,8 @@ const ChartTooltip: FunctionComponent<ChartTooltipProps> = ({
 
   const bandValue = band ? valueByKey[band.dataKey] : undefined
 
-  /* Thirty rows would swamp the tooltip, so the trail is represented by its two ends. */
-  const trailEnds = isTrailShown && trail?.steps.length
+  /* A row per dated line would swamp the tooltip, so a trail shows its two ends. */
+  const trailEnds = trail?.steps.length
     ? [
       trail.steps[trail.steps.length - 1],
       trail.steps[0]
@@ -259,7 +259,7 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
   shadeBelowZero,
   showZeroLine,
   toggleableSeries,
-  trail,
+  trails,
   valueDigits = 2,
   valueSuffix = '%',
   xAxisKey,
@@ -271,7 +271,7 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
   const isSmallScreen = useIsSmallScreen()
   const chartHeight = height ?? (isSmallScreen ? 240 : 320)
   const [ hiddenKeys, setHiddenKeys ] = useState<Record<string, boolean>>({})
-  const [ isTrailShown, setIsTrailShown ] = useState(false)
+  const [ shownTrailKey, setShownTrailKey ] = useState<string | null>(null)
 
   /* Only the drawn series feed the lines, labels, tooltip and domain; the legend keeps
      every entry so a hidden one can be switched back on. */
@@ -290,18 +290,17 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
       [fredId]: !hidden[fredId]
     }))
 
-    /* The trail is the same curve drawn day by day, so bringing a dated line back
-       switches it off rather than stacking the two readings of the same data. */
-    if (hiddenKeys[fredId]) setIsTrailShown(false)
+    /* A trail is the same curve drawn reading by reading, so bringing a dated line
+       back switches it off rather than stacking two views of the same data. */
+    if (hiddenKeys[fredId]) setShownTrailKey(null)
   }
 
-  const trailOldestColor = trail?.steps[0]?.color ?? GREY3
-  const trailNewestColor = trail?.steps[trail.steps.length - 1]?.color ?? GREY3
+  const shownTrail = trails?.find(({ key }) => key === shownTrailKey)
 
-  const toggleTrail = (): void => {
-    const isShown = !isTrailShown
+  const toggleTrail = (key: string): void => {
+    const isShown = key !== shownTrailKey
 
-    setIsTrailShown(isShown)
+    setShownTrailKey(isShown ? key : null)
 
     if (isShown) {
       setHiddenKeys(Object.fromEntries(series.map(({ fredId }) => [ fredId, true ])))
@@ -400,6 +399,34 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
     )
   }
 
+  /* One checkbox for the whole trail, its swatch showing the ramp the lines run along. */
+  const renderTrailEntry = ({
+    key,
+    label,
+    steps
+  }: TrailConfig): ReactElement => {
+    const isShown = key === shownTrailKey
+    const oldestColor = steps[0]?.color ?? GREY3
+    const newestColor = steps[steps.length - 1]?.color ?? GREY3
+
+    return (
+      <label className={`chart-legend-toggle${isShown ? '' : ' chart-legend-toggle--off'}`}>
+        <input
+          checked={isShown}
+          className='chart-legend-checkbox'
+          onChange={() => { toggleTrail(key) }}
+          style={{ accentColor: newestColor }}
+          type='checkbox'
+        />
+        <span
+          className='chart-legend-swatch chart-legend-swatch--trail'
+          style={{ backgroundImage: `linear-gradient(to right, ${oldestColor}, ${newestColor})` }}
+        />
+        { label }
+      </label>
+    )
+  }
+
   const renderLegend = (): ReactElement =>
     <ul className='chart-legend'>
       { band && (
@@ -422,27 +449,14 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
           { renderLegendEntry(seriesConfig) }
         </li>
       )) }
-      { trail && toggleableSeries && (
+      { toggleableSeries && trails?.map(trailConfig => (
         <li
           className='chart-legend-item'
-          key='trail'
+          key={trailConfig.key}
         >
-          <label className={`chart-legend-toggle${isTrailShown ? '' : ' chart-legend-toggle--off'}`}>
-            <input
-              checked={isTrailShown}
-              className='chart-legend-checkbox'
-              onChange={toggleTrail}
-              style={{ accentColor: trailNewestColor }}
-              type='checkbox'
-            />
-            <span
-              className='chart-legend-swatch chart-legend-swatch--trail'
-              style={{ backgroundImage: `linear-gradient(to right, ${trailOldestColor}, ${trailNewestColor})` }}
-            />
-            { trail.label }
-          </label>
+          { renderTrailEntry(trailConfig) }
         </li>
-      ) }
+      )) }
     </ul>
 
   return (
@@ -494,9 +508,8 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
               content={
                 <ChartTooltip
                   band={band}
-                  isTrailShown={isTrailShown}
                   series={drawnSeries}
-                  trail={trail}
+                  trail={shownTrail}
                   valueDigits={valueDigits}
                   valueSuffix={valueSuffix}
                   xTooltipFormatter={xTooltipFormatter}
@@ -538,7 +551,7 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
                 stroke='none'
               />
             ) }
-            { isTrailShown && trail?.steps.map(({ color, dataKey }) => (
+            { shownTrail?.steps.map(({ color, dataKey }) => (
               <Line
                 activeDot={false}
                 connectNulls

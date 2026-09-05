@@ -34,6 +34,7 @@ import { useIsSmallScreen } from '../../hooks/useIsSmallScreen'
 const YieldCurveChartStyled = styled.div`${YieldCurveChartStyles}`
 
 const TRAIL_DAYS = 30
+const TRAIL_WEEKS = 6
 
 /* The oldest day is drawn warm and the most recent cool, so the curve's drift over the
    window reads as a direction rather than a tangle. */
@@ -95,6 +96,19 @@ export const YieldCurveChart: FunctionComponent<YieldCurveChartProps> = ({
     [ curveHistory, trailFrom ]
   )
 
+  /* Weekly readings are taken at seven day strides and resolved backwards onto the
+     last trading day on or before each stride, so a holiday never drops a line. */
+  const weekTrailDates = useMemo(
+    () => Array.from(
+      { length: TRAIL_WEEKS },
+      (
+        _,
+        index
+      ) => daysAgoDate((TRAIL_WEEKS - 1 - index) * 7)
+    ),
+    []
+  )
+
   const data = useMemo(
     () => {
       const latestByFredId: Record<string, number | null> = {}
@@ -146,6 +160,16 @@ export const YieldCurveChart: FunctionComponent<YieldCurveChartProps> = ({
           )
         })
 
+        weekTrailDates.forEach((
+          date,
+          index
+        ) => {
+          row[`weekTrail${index}`] = valueOnOrBefore(
+            curveHistory[fredId],
+            date
+          )
+        })
+
         return row
       })
 
@@ -158,6 +182,7 @@ export const YieldCurveChart: FunctionComponent<YieldCurveChartProps> = ({
       weekAgo,
       monthAgo,
       trailDates,
+      weekTrailDates,
       yearAgo
     ]
   )
@@ -202,33 +227,51 @@ export const YieldCurveChart: FunctionComponent<YieldCurveChartProps> = ({
     }
   ]
 
-  const trail: TrailConfig = {
-    label: `Last ${TRAIL_DAYS} days`,
-    steps: trailDates.map((
+  const buildTrail = (
+    key: string,
+    label: string,
+    dates: string[]
+  ): TrailConfig => ({
+    key,
+    label,
+    steps: dates.map((
       date,
       index
     ) => ({
       color: mixHexColors(
         TRAIL_OLDEST_COLOR,
         TRAIL_NEWEST_COLOR,
-        trailDates.length > 1 ? index / (trailDates.length - 1) : 1
+        dates.length > 1 ? index / (dates.length - 1) : 1
       ),
-      dataKey: `trail${index}`,
+      dataKey: `${key}${index}`,
       date
     }))
-  }
+  })
+
+  const trails: TrailConfig[] = [
+    buildTrail(
+      'trail',
+      `Last ${TRAIL_DAYS} days`,
+      trailDates
+    ),
+    buildTrail(
+      'weekTrail',
+      `Last ${TRAIL_WEEKS} weeks`,
+      weekTrailDates
+    )
+  ]
 
   return (
     <YieldCurveChartStyled>
       <ChartCard
-        description='Treasury yields by maturity today and at four earlier points, or every trading day of the last 30. A downward sloping segment is an inverted curve.'
+        description='Treasury yields by maturity today and at four earlier points, or as a trail of the last 30 days or 6 weeks. A downward sloping segment is an inverted curve.'
         title='Yield curve'
       >
         <MarketChart
           data={data}
           series={series}
           toggleableSeries
-          trail={trail}
+          trails={trails}
           xAxisKey='months'
           xIsNumeric
           xTickFormatter={value => tenorLabel(Number(value))}
