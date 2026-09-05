@@ -19,7 +19,10 @@ import {
 } from 'recharts'
 import styled from 'styled-components'
 import { MarketChartStyles } from './MarketChartStyles'
-import { formatValue } from './marketsConfig'
+import {
+  formatShortDate,
+  formatValue
+} from './marketsConfig'
 import {
   type ChartRow,
   type ChartSeriesConfig
@@ -40,6 +43,19 @@ export interface BandConfig {
   label: string
 }
 
+export interface TrailStep {
+  dataKey: string
+  date: string
+  opacity: number
+}
+
+/* A single legend entry standing for many faint dated lines of the same series. */
+export interface TrailConfig {
+  color: string
+  label: string
+  steps: TrailStep[]
+}
+
 interface MarketChartProps {
   band?: BandConfig
   data: ChartRow[]
@@ -48,6 +64,7 @@ interface MarketChartProps {
   shadeBelowZero?: boolean
   showZeroLine?: boolean
   toggleableSeries?: boolean
+  trail?: TrailConfig
   valueDigits?: number
   valueSuffix?: string
   xAxisKey: string
@@ -65,9 +82,11 @@ interface TooltipPayloadItem {
 interface ChartTooltipProps {
   active?: boolean
   band?: BandConfig
+  isTrailShown?: boolean
   label?: string | number
   payload?: TooltipPayloadItem[]
   series?: ChartSeriesConfig[]
+  trail?: TrailConfig
   valueDigits?: number
   valueSuffix?: string
   xTooltipFormatter?: (value: string | number) => string
@@ -89,9 +108,11 @@ const toNumber = (value: number | string | null | undefined): number | null =>
 const ChartTooltip: FunctionComponent<ChartTooltipProps> = ({
   active,
   band,
+  isTrailShown,
   label,
   payload,
   series = [],
+  trail,
   valueDigits = 2,
   valueSuffix = '%',
   xTooltipFormatter
@@ -105,6 +126,17 @@ const ChartTooltip: FunctionComponent<ChartTooltipProps> = ({
   })
 
   const bandValue = band ? valueByKey[band.dataKey] : undefined
+
+  /* Thirty rows would swamp the tooltip, so the trail is represented by its two ends. */
+  const trailEnds = isTrailShown && trail?.steps.length
+    ? [
+      trail.steps[trail.steps.length - 1],
+      trail.steps[0]
+    ].slice(
+      0,
+      trail.steps.length
+    )
+    : []
 
   return (
     <div className='chart-tooltip'>
@@ -129,6 +161,30 @@ const ChartTooltip: FunctionComponent<ChartTooltipProps> = ({
           </span>
         </div>
       ) }
+      { trailEnds.map(({ dataKey, date }) => {
+        const value = valueByKey[dataKey]
+
+        if (Array.isArray(value)) return null
+
+        return (
+          <div
+            className='chart-tooltip-row'
+            key={dataKey}
+          >
+            <span
+              className='chart-tooltip-swatch'
+              style={{ backgroundColor: trail?.color }}
+            />
+            <span>{ formatShortDate(date) }</span>
+            <span className='chart-tooltip-value'>
+              { `${formatValue(
+                value,
+                valueDigits
+              )}${valueSuffix}` }
+            </span>
+          </div>
+        )
+      }) }
       { series.map(({ color, fredId, label: seriesLabel }) => {
         const value = valueByKey[fredId]
 
@@ -203,6 +259,7 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
   shadeBelowZero,
   showZeroLine,
   toggleableSeries,
+  trail,
   valueDigits = 2,
   valueSuffix = '%',
   xAxisKey,
@@ -214,6 +271,7 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
   const isSmallScreen = useIsSmallScreen()
   const chartHeight = height ?? (isSmallScreen ? 240 : 320)
   const [ hiddenKeys, setHiddenKeys ] = useState<Record<string, boolean>>({})
+  const [ isTrailShown, setIsTrailShown ] = useState(false)
 
   /* Only the drawn series feed the lines, labels, tooltip and domain; the legend keeps
      every entry so a hidden one can be switched back on. */
@@ -231,6 +289,20 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
       ...hidden,
       [fredId]: !hidden[fredId]
     }))
+
+    /* The trail is the same curve drawn day by day, so bringing a dated line back
+       switches it off rather than stacking the two readings of the same data. */
+    if (hiddenKeys[fredId]) setIsTrailShown(false)
+  }
+
+  const toggleTrail = (): void => {
+    const isShown = !isTrailShown
+
+    setIsTrailShown(isShown)
+
+    if (isShown) {
+      setHiddenKeys(Object.fromEntries(series.map(({ fredId }) => [ fredId, true ])))
+    }
   }
 
   /* The gutter has to fit the longest direct end-of-line label, swatch included. */
@@ -347,6 +419,27 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
           { renderLegendEntry(seriesConfig) }
         </li>
       )) }
+      { trail && toggleableSeries && (
+        <li
+          className='chart-legend-item'
+          key='trail'
+        >
+          <label className={`chart-legend-toggle${isTrailShown ? '' : ' chart-legend-toggle--off'}`}>
+            <input
+              checked={isTrailShown}
+              className='chart-legend-checkbox'
+              onChange={toggleTrail}
+              style={{ accentColor: trail.color }}
+              type='checkbox'
+            />
+            <span
+              className='chart-legend-swatch chart-legend-swatch--trail'
+              style={{ backgroundImage: `linear-gradient(to right, ${trail.color}1f, ${trail.color})` }}
+            />
+            { trail.label }
+          </label>
+        </li>
+      ) }
     </ul>
 
   return (
@@ -398,7 +491,9 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
               content={
                 <ChartTooltip
                   band={band}
+                  isTrailShown={isTrailShown}
                   series={drawnSeries}
+                  trail={trail}
                   valueDigits={valueDigits}
                   valueSuffix={valueSuffix}
                   xTooltipFormatter={xTooltipFormatter}
@@ -440,6 +535,20 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
                 stroke='none'
               />
             ) }
+            { isTrailShown && trail?.steps.map(({ dataKey, opacity }) => (
+              <Line
+                activeDot={false}
+                connectNulls
+                dataKey={dataKey}
+                dot={false}
+                isAnimationActive={false}
+                key={dataKey}
+                stroke={trail.color}
+                strokeOpacity={opacity}
+                strokeWidth={1.5}
+                type='monotone'
+              />
+            )) }
             { drawnSeries.map(({
               color,
               fredId,

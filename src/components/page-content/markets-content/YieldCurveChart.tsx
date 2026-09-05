@@ -1,7 +1,10 @@
 import { type FunctionComponent, useMemo } from 'react'
 import styled from 'styled-components'
 import { ChartCard } from './ChartCard'
-import { MarketChart } from './MarketChart'
+import {
+  MarketChart,
+  type TrailConfig
+} from './MarketChart'
 import {
   CURVE_IDS,
   daysAgoDate,
@@ -28,6 +31,13 @@ import {
 import { useIsSmallScreen } from '../../hooks/useIsSmallScreen'
 
 const YieldCurveChartStyled = styled.div`${YieldCurveChartStyles}`
+
+const TRAIL_DAYS = 30
+
+/* Faintest for the oldest day, near solid for the most recent, so the drift reads as
+   a direction rather than a tangle. */
+const TRAIL_MIN_OPACITY = 0.12
+const TRAIL_MAX_OPACITY = 0.9
 
 const SMALL_SCREEN_TICKS = [
   1,
@@ -66,6 +76,23 @@ export const YieldCurveChart: FunctionComponent<YieldCurveChartProps> = ({
   const weekAgo = daysAgoDate(7)
   const monthAgo = daysAgoDate(31)
   const yearAgo = daysAgoDate(366)
+  const trailFrom = daysAgoDate(TRAIL_DAYS)
+
+  /* One line per day the Treasury actually published in the window, oldest first. */
+  const trailDates = useMemo(
+    () => {
+      const dates = new Set<string>()
+
+      CURVE_IDS.forEach(fredId => {
+        curveHistory[fredId]?.observations?.forEach(({ date }) => {
+          if (date >= trailFrom) dates.add(date)
+        })
+      })
+
+      return Array.from(dates).sort()
+    },
+    [ curveHistory, trailFrom ]
+  )
 
   const data = useMemo(
     () => {
@@ -85,27 +112,41 @@ export const YieldCurveChart: FunctionComponent<YieldCurveChartProps> = ({
         comparisonByKey[key] = values
       })
 
-      const rows: ChartRow[] = CURVE_IDS.map(fredId => ({
-        fredId,
-        months: TENOR_MONTHS[fredId],
-        latest: latestByFredId[fredId] ?? curveHistory[fredId]?.latest?.value ?? null,
-        dayAgo: comparisonByKey.dayAgo?.[fredId] ?? valueOnOrBefore(
-          curveHistory[fredId],
-          dayAgo
-        ),
-        weekAgo: comparisonByKey.weekAgo?.[fredId] ?? valueOnOrBefore(
-          curveHistory[fredId],
-          weekAgo
-        ),
-        monthAgo: valueOnOrBefore(
-          curveHistory[fredId],
-          monthAgo
-        ),
-        yearAgo: valueOnOrBefore(
-          curveHistory[fredId],
-          yearAgo
-        )
-      }))
+      const rows: ChartRow[] = CURVE_IDS.map(fredId => {
+        const row: ChartRow = {
+          fredId,
+          months: TENOR_MONTHS[fredId],
+          latest: latestByFredId[fredId] ?? curveHistory[fredId]?.latest?.value ?? null,
+          dayAgo: comparisonByKey.dayAgo?.[fredId] ?? valueOnOrBefore(
+            curveHistory[fredId],
+            dayAgo
+          ),
+          weekAgo: comparisonByKey.weekAgo?.[fredId] ?? valueOnOrBefore(
+            curveHistory[fredId],
+            weekAgo
+          ),
+          monthAgo: valueOnOrBefore(
+            curveHistory[fredId],
+            monthAgo
+          ),
+          yearAgo: valueOnOrBefore(
+            curveHistory[fredId],
+            yearAgo
+          )
+        }
+
+        trailDates.forEach((
+          date,
+          index
+        ) => {
+          row[`trail${index}`] = valueOnOrBefore(
+            curveHistory[fredId],
+            date
+          )
+        })
+
+        return row
+      })
 
       return rows
     },
@@ -115,6 +156,7 @@ export const YieldCurveChart: FunctionComponent<YieldCurveChartProps> = ({
       dayAgo,
       weekAgo,
       monthAgo,
+      trailDates,
       yearAgo
     ]
   )
@@ -159,16 +201,32 @@ export const YieldCurveChart: FunctionComponent<YieldCurveChartProps> = ({
     }
   ]
 
+  const trail: TrailConfig = {
+    color: SERIES1,
+    label: `Last ${TRAIL_DAYS} days`,
+    steps: trailDates.map((
+      date,
+      index
+    ) => ({
+      dataKey: `trail${index}`,
+      date,
+      opacity: trailDates.length > 1
+        ? TRAIL_MIN_OPACITY + ((TRAIL_MAX_OPACITY - TRAIL_MIN_OPACITY) * index) / (trailDates.length - 1)
+        : TRAIL_MAX_OPACITY
+    }))
+  }
+
   return (
     <YieldCurveChartStyled>
       <ChartCard
-        description='Treasury yields by maturity today and at four earlier points. A downward sloping segment is an inverted curve.'
+        description='Treasury yields by maturity today and at four earlier points, or every trading day of the last 30. A downward sloping segment is an inverted curve.'
         title='Yield curve'
       >
         <MarketChart
           data={data}
           series={series}
           toggleableSeries
+          trail={trail}
           xAxisKey='months'
           xIsNumeric
           xTickFormatter={value => tenorLabel(Number(value))}

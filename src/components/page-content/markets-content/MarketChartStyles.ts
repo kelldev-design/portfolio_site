@@ -58,6 +58,10 @@ export const MarketChartStyles = css`
     flex-shrink: 0;
   }
 
+  .chart-legend-swatch.chart-legend-swatch--trail {
+    width: 22px;
+  }
+
   .chart-legend-swatch.chart-legend-swatch--band {
     height: 10px;
     border-radius: 2px;
