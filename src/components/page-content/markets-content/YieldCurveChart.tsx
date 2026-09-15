@@ -274,6 +274,7 @@ export const YieldCurveChart: FunctionComponent<YieldCurveChartProps> = ({
       >
         <MarketChart
           data={data}
+          newestOnTop
           series={series}
           toggleableSeries
           trails={trails}

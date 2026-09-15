@@ -66,6 +66,9 @@ interface MarketChartProps {
   band?: BandConfig
   data: ChartRow[]
   height?: number
+  /* Set when `series` runs newest first and the entries are readings of one thing rather
+     than separate instruments, so the lines overlap and which sits on top matters. */
+  newestOnTop?: boolean
   series: ChartSeriesConfig[]
   shadeBelowZero?: boolean
   showZeroLine?: boolean
@@ -259,6 +262,7 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
   band,
   data,
   height,
+  newestOnTop,
   series,
   shadeBelowZero,
   showZeroLine,
@@ -285,6 +289,18 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
       hiddenKeys,
       series,
       toggleableSeries
+    ]
+  )
+
+  /* SVG paints in document order, so the last line drawn is the one on top. The legend,
+     tooltip and labels keep the given order — newest first, which is how they read — and
+     only the drawing is flipped, laying the oldest line down first so each newer reading
+     covers it rather than being buried under a year-old curve. */
+  const paintedSeries = useMemo(
+    () => (newestOnTop ? [ ...drawnSeries ].reverse() : drawnSeries),
+    [
+      drawnSeries,
+      newestOnTop
     ]
   )
 
@@ -576,7 +592,7 @@ export const MarketChart: FunctionComponent<MarketChartProps> = ({
                 />
               )
             }) }
-            { drawnSeries.map(({
+            { paintedSeries.map(({
               color,
               fredId,
               label,
