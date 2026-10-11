@@ -5,9 +5,20 @@ import {
   useContext,
   useState
 } from 'react'
+import { useMutation } from '@apollo/client'
 import styled from 'styled-components'
 import { AdminContentStyles } from './AdminContentStyles'
 import { PortfolioItemForm } from './PortfolioItemForm'
+import {
+  DragHandle,
+  SortableItem,
+  SortableList
+} from './SortableList'
+import {
+  GET_PORTFOLIO_ITEMS,
+  REORDER_PORTFOLIO_ITEMS
+} from '../../../queries/graphQL'
+import { type ReorderPortfolioItemsResponse } from '../../../types/generatedGQLTypes'
 import { Image } from '../../common/image/Image'
 import { TagH } from '../../common/tag-h/TagH'
 import { Container } from '../../layout/container/Container'
@@ -20,12 +31,44 @@ import { PortfolioContext } from '../../wrappers/PortfolioContextProvider'
 
 const AdminContentStyled = styled.div`${AdminContentStyles}`
 
+interface ReorderMutationDataType {
+  reorderPortfolioItems: ReorderPortfolioItemsResponse
+}
+
 const AdminContent: FunctionComponent = () => {
   const { isNavigating, projectIds, portfolioMap } = useContext(PortfolioContext)
 
   // The projectId of the item being edited, or '' while creating a new one.
   const [ selectedProjectId, setSelectedProjectId ] = useState('')
   const selectedItem = selectedProjectId ? portfolioMap[selectedProjectId] : undefined
+
+  // The order just dropped, shown until the refetched list arrives in that order, so the
+  // list does not jump back while the save is in flight. Cleared if the save fails.
+  const [ pendingOrder, setPendingOrder ] = useState<string[] | null>(null)
+  const [ orderError, setOrderError ] = useState('')
+  const orderedProjectIds = pendingOrder ?? projectIds
+
+  const [ reorderPortfolioItems ] = useMutation<ReorderMutationDataType>(
+    REORDER_PORTFOLIO_ITEMS,
+    {
+      awaitRefetchQueries: true,
+      refetchQueries: [{ query: GET_PORTFOLIO_ITEMS }]
+    }
+  )
+
+  const handleReorder = (newOrder: string[]): void => {
+    setPendingOrder(newOrder)
+    setOrderError('')
+
+    void reorderPortfolioItems({ variables: { ids: newOrder.map(projectId => portfolioMap[projectId].id) } })
+      .then(({ data }) => {
+        const response = data?.reorderPortfolioItems
+
+        if (!response?.success) setOrderError(response?.message ?? 'The new order could not be saved.')
+      })
+      .catch((error: Error) => { setOrderError(error.message) })
+      .finally(() => { setPendingOrder(null) })
+  }
 
   const renderPanel = (
     pureClass: string,
@@ -69,42 +112,61 @@ const AdminContent: FunctionComponent = () => {
       </Spacer>
     </PureUnit>
 
-  const renderProjectButton = (projectId: string): ReactElement => {
+  const renderProjectRow = (projectId: string): ReactElement => {
     const projectItem = portfolioMap[projectId]
     const isSelected = projectId === selectedProjectId
 
     return (
-      <li key={projectId}>
-        <button
-          aria-current={isSelected}
-          className={`admin-project ${isSelected ? 'is-selected' : ''}`}
-          onClick={() => { setSelectedProjectId(projectId) }}
-          type='button'
-        >
-          <Image
-            altText={projectItem.name}
-            src={projectItem.primaryImage.imageUrl}
-            width='40px'
-          />
-          <span>{ projectItem.name }</span>
-        </button>
-      </li>
+      <SortableItem
+        id={projectId}
+        key={projectId}
+      >
+        { handleProps =>
+          <div className={`admin-project-row ${isSelected ? 'is-selected' : ''}`}>
+            <DragHandle
+              handleProps={handleProps}
+              label={`Reorder ${projectItem.name}`}
+            />
+            <button
+              aria-current={isSelected}
+              className='admin-project'
+              onClick={() => { setSelectedProjectId(projectId) }}
+              type='button'
+            >
+              <Image
+                altText={projectItem.name}
+                src={projectItem.primaryImage.imageUrl}
+                width='40px'
+              />
+              <span>{ projectItem.name }</span>
+            </button>
+          </div> }
+      </SortableItem>
     )
   }
 
   const renderProjects = (): ReactElement =>
     <>
-      <button
-        aria-current={!selectedItem}
-        className={`admin-project admin-project-new ${!selectedItem ? 'is-selected' : ''}`}
-        onClick={() => { setSelectedProjectId('') }}
-        type='button'
-      >
-        + New project
-      </button>
-      <ul className='admin-project-list'>
-        { projectIds.map(renderProjectButton) }
-      </ul>
+      <div className={`admin-project-row ${!selectedItem ? 'is-selected' : ''}`}>
+        <button
+          aria-current={!selectedItem}
+          className='admin-project admin-project-new'
+          onClick={() => { setSelectedProjectId('') }}
+          type='button'
+        >
+          + New project
+        </button>
+      </div>
+      <div className='admin-project-hint'>Drag ⠿ to reorder. The site shows projects in this order.</div>
+      { orderError && <div className='admin-order-error'>{ orderError }</div> }
+      <div className='admin-project-list'>
+        <SortableList
+          ids={orderedProjectIds}
+          onReorder={handleReorder}
+        >
+          { orderedProjectIds.map(renderProjectRow) }
+        </SortableList>
+      </div>
     </>
 
   return (

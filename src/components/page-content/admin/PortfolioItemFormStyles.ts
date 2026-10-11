@@ -36,6 +36,18 @@ export const PortfolioItemFormStyles = css`
     padding-bottom: ${SPACING_Y};
   }
 
+  .form-row-thumbnail {
+    flex-shrink: 0;
+    padding-bottom: ${SPACING_Y};
+    width: 40px;
+  }
+
+  .form-hint {
+    color: ${GREY3};
+    font-size: 12px;
+    margin-top: 4px;
+  }
+
   .form-checkbox-group {
     display: flex;
     gap: ${SPACING_X};

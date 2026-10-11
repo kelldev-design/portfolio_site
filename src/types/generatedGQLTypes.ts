@@ -92,6 +92,8 @@ export interface Mutation {
   __typename?: 'Mutation'
   createPortfolioItem: CreatePortfolioItemResponse
   login: AuthResponse
+  /** Sets the site order. `ids` must list every portfolio item exactly once, first to last. */
+  reorderPortfolioItems: ReorderPortfolioItemsResponse
   /** Replaces every field of the item with `id`. Takes the same input as `createPortfolioItem`. */
   updatePortfolioItem: UpdatePortfolioItemResponse
 }
@@ -103,6 +105,10 @@ export interface MutationCreatePortfolioItemArgs {
 export interface MutationLoginArgs {
   password: Scalars['String']['input']
   username: Scalars['String']['input']
+}
+
+export interface MutationReorderPortfolioItemsArgs {
+  ids: Array<Scalars['Int']['input']>
 }
 
 export interface MutationUpdatePortfolioItemArgs {
@@ -123,6 +129,7 @@ export interface PortfolioItem {
   productLinks?: Maybe<Link[]>
   products: Product[]
   projectId: Scalars['String']['output']
+  /** In gallery order, as given in the input's `projectImages`. */
   projectImages: ProjectImage[]
 }
 
@@ -165,6 +172,14 @@ export interface QueryMarketSeriesArgs {
 
 export interface QueryYieldCurveArgs {
   date?: InputMaybe<Scalars['String']['input']>
+}
+
+export interface ReorderPortfolioItemsResponse {
+  __typename?: 'ReorderPortfolioItemsResponse'
+  code: Scalars['Int']['output']
+  message: Scalars['String']['output']
+  portfolioItems?: Maybe<PortfolioItem[]>
+  success: Scalars['Boolean']['output']
 }
 
 export interface UpdatePortfolioItemResponse {

@@ -90,6 +90,16 @@ export const UPDATE_PORTFOLIO_ITEM = gql`
   }
 `
 
+export const REORDER_PORTFOLIO_ITEMS = gql`
+  mutation ReorderPortfolioItems($ids: [Int!]!) {
+    reorderPortfolioItems(ids: $ids) {
+      code
+      message
+      success
+    }
+  }
+`
+
 export const LOGIN = gql`
   mutation Login($username: String!, $password: String!) {
     login(username: $username, password: $password) {
