@@ -1,7 +1,7 @@
 import { useContext, type FunctionComponent } from 'react'
-import { useOktaAuth } from '@okta/okta-react'
 import styled from 'styled-components'
 import { NavMenuStyles } from './NavMenuStyles'
+import { type PortfolioContextValueType } from '../../../types/contextTypes'
 import { PortfolioContext } from '../../wrappers/PortfolioContextProvider'
 import { NavMenuItem } from '../nav-menu-item/NavMenuItem'
 import { Spacer } from '../spacer/Spacer'
@@ -9,12 +9,12 @@ import { Spacer } from '../spacer/Spacer'
 const NavMenuStyled = styled.div`${NavMenuStyles}`
 
 export const NavMenu: FunctionComponent = () => {
-  const { oktaAuth } = useOktaAuth()
-  const { isLoggedIn } = useContext(PortfolioContext)
+  const {
+    handleLogout,
+    isLoggedIn
+  } = useContext(PortfolioContext) as PortfolioContextValueType
 
-  const handleLogoutClick = (): void => {
-    void oktaAuth.signOut()
-  }
+  const handleLogoutClick = (): void => { handleLogout() }
 
   const spacerProps = {
     b: 0,
@@ -74,7 +74,7 @@ export const NavMenu: FunctionComponent = () => {
                 <NavMenuItem
                   handleClick={handleLogoutClick}
                   text='Logout'
-                  toUrl='#'
+                  toUrl='/'
                 />
               </Spacer>
             </div>

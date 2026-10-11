@@ -5,9 +5,7 @@ import React,
   useState,
   type FunctionComponent
 } from 'react'
-import { useQuery } from '@apollo/client'
-import { isRedirectUri } from '@okta/okta-auth-js'
-import { useOktaAuth } from '@okta/okta-react'
+import { useApolloClient, useQuery } from '@apollo/client'
 import { useLocation } from 'react-router-dom'
 import { GET_PORTFOLIO_ITEMS } from '../../queries/graphQL'
 import {
@@ -21,6 +19,11 @@ import {
   type ImageLoadCallbackType,
   type TrueMapType
 } from '../../types/sharedTypes'
+import {
+  clearAuthToken,
+  hasValidAuthToken,
+  setAuthToken
+} from '../../utils/auth'
 import { kelldevDesignLogo } from '../../utils/constants/imageLinksCdn'
 import {
   preloadImagesSet,
@@ -48,12 +51,12 @@ interface PortfolioContextProviderProps {
 
 const PortfolioContextProvider: FunctionComponent<PortfolioContextProviderProps> = ({ children }) => {
   const { data: portfolioDataResponse } = useQuery(GET_PORTFOLIO_ITEMS)
-  const { authState, oktaAuth } = useOktaAuth()
+  const apolloClient = useApolloClient()
   const [ areHomeImagesLoaded, setAreHomeImagesLoaded ] = useState(intialPortfolioContextState.areHomeImagesLoaded)
   const [ isLoading, setIsLoading ] = useState(intialPortfolioContextState.isLoading)
   const [ isMobileNavOpen, setIsMobileNavOpen ] = useState(intialPortfolioContextState.isMobileNavOpen)
   const [ isNavigating, setIsNavigating ] = useState(intialPortfolioContextState.isNavigating)
-  const [ isLoggedIn, setIsLoggedIn ] = useState<boolean | null>(null)
+  const [ isLoggedIn, setIsLoggedIn ] = useState<boolean | null>(intialPortfolioContextState.isLoggedIn)
   const [ portfolioMap, setPortfolioMap ] = useState(intialPortfolioContextState.portfolioMap)
   const [ projectIds, setProjectIds ] = useState(intialPortfolioContextState.projectIds)
   const [ projectImagesPreloaded, setProjectImagesPreloaded ] = useState(intialPortfolioContextState.projectImagesPreloaded)
@@ -76,22 +79,20 @@ const PortfolioContextProvider: FunctionComponent<PortfolioContextProviderProps>
   }
 
   useEffect(
-    () => {
-      if (
-        !authState ||
-        typeof authState.isAuthenticated !== 'boolean' ||
-        isRedirectUri(
-          window.location.href,
-          oktaAuth
-        )
-      ) {
-        return
-      }
-
-      setIsLoggedIn(authState.isAuthenticated)
-    },
-    [ authState, oktaAuth ]
+    () => { setIsLoggedIn(hasValidAuthToken()) },
+    []
   )
+
+  const handleLogin = (token: string): void => {
+    setAuthToken(token)
+    setIsLoggedIn(true)
+  }
+
+  const handleLogout = (): void => {
+    clearAuthToken()
+    setIsLoggedIn(false)
+    void apolloClient.resetStore()
+  }
 
   useEffect(
     () => {
@@ -180,6 +181,8 @@ const PortfolioContextProvider: FunctionComponent<PortfolioContextProviderProps>
 
   const contextValue: PortfolioContextValueType = {
     areHomeImagesLoaded,
+    handleLogin,
+    handleLogout,
     handleNavigation,
     handleNavigationComplete,
     isLoading,

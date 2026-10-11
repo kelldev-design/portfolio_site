@@ -1,5 +1,4 @@
 import { type FunctionComponent } from 'react'
-import { LoginCallback } from '@okta/okta-react'
 import {
   createBrowserRouter,
   Outlet,
@@ -9,7 +8,6 @@ import styled from 'styled-components'
 import { appStyles } from './AppStyles'
 import { Header } from './components/layout/header/Header'
 import KeyCommandProvider from './components/wrappers/KeyCommandProvider'
-import OktaProvider from './components/wrappers/OktaProvider'
 import { PortfolioContextProvider } from './components/wrappers/PortfolioContextProvider'
 import ProtectedRoute from './components/wrappers/ProtectedRoute'
 import { Admin } from './routes/Admin'
@@ -26,17 +24,15 @@ const AppStyled = styled.div`${appStyles}`
 const router = createBrowserRouter([
   {
     element: (
-      <OktaProvider>
-        <PortfolioContextProvider>
-          <KeyCommandProvider>
-            <AppStyled>
-              <div className='scroll-spacer' />
-              <Header />
-              <Outlet />
-            </AppStyled>
-          </KeyCommandProvider>
-        </PortfolioContextProvider>
-      </OktaProvider>
+      <PortfolioContextProvider>
+        <KeyCommandProvider>
+          <AppStyled>
+            <div className='scroll-spacer' />
+            <Header />
+            <Outlet />
+          </AppStyled>
+        </KeyCommandProvider>
+      </PortfolioContextProvider>
     ),
     children: [
       {
@@ -76,10 +72,6 @@ const router = createBrowserRouter([
       {
         path: '/admin',
         element: <ProtectedRoute><Admin /></ProtectedRoute>
-      },
-      {
-        path: '/login/callback',
-        element: <LoginCallback />
       }
     ]
   }

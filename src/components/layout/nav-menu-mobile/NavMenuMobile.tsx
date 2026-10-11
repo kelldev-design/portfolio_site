@@ -3,28 +3,30 @@ import {
   type ReactElement,
   type ReactEventHandler,
   useCallback,
+  useContext,
   useRef,
   useState
 } from 'react'
-import { useOktaAuth } from '@okta/okta-react'
 import { Flipped, Flipper } from 'react-flip-toolkit'
 import styled from 'styled-components'
 import { NavMenuMobileStyles } from './NavMenuMobileStyles'
+import { type PortfolioContextValueType } from '../../../types/contextTypes'
 import { ButtonCustom } from '../../common/button-custom/ButtonCustom'
 import { useClickOutsideRefHandler } from '../../hooks/useClickOutsideRefHandler'
+import { PortfolioContext } from '../../wrappers/PortfolioContextProvider'
 import { NavMenuItem } from '../nav-menu-item/NavMenuItem'
 import { Spacer } from '../spacer/Spacer'
 
 const NavMenuMobileStyled = styled.div`${NavMenuMobileStyles}`
 
 export const NavMenuMobile: FunctionComponent = () => {
-  const { oktaAuth, authState } = useOktaAuth()
+  const {
+    handleLogout,
+    isLoggedIn
+  } = useContext(PortfolioContext) as PortfolioContextValueType
+
   const [ isNavOpen, setIsNavOpen ] = useState(false)
   const wrapperRef = useRef(null)
-
-  const handleLogoutClick = (): void => {
-    void oktaAuth.signOut()
-  }
 
   const closeMenu = useCallback(
     (): void => {
@@ -34,6 +36,11 @@ export const NavMenuMobile: FunctionComponent = () => {
   )
 
   const handleLinkClick = (): void => { closeMenu() }
+
+  const handleLogoutClick = (): void => {
+    handleLogout()
+    closeMenu()
+  }
 
   useClickOutsideRefHandler(
     wrapperRef,
@@ -96,16 +103,29 @@ export const NavMenuMobile: FunctionComponent = () => {
           </Spacer>
         </div>
         {
-          authState?.isAuthenticated &&
-          <div className='nav-bar-item-wrapper'>
-            <Spacer {...spacerProps}>
-              <NavMenuItem
-                handleClick={handleLogoutClick}
-                text='Logout'
-                toUrl='#'
-              />
-            </Spacer>
-          </div>
+          isLoggedIn &&
+          <>
+            <div className='nav-bar-item-wrapper'>
+              <Spacer {...spacerProps}>
+                <NavMenuItem
+                  handleClick={handleLinkClick}
+                  tabIndex={isNavOpen ? 0 : -1}
+                  text='Admin'
+                  toUrl='/admin'
+                />
+              </Spacer>
+            </div>
+            <div className='nav-bar-item-wrapper'>
+              <Spacer {...spacerProps}>
+                <NavMenuItem
+                  handleClick={handleLogoutClick}
+                  tabIndex={isNavOpen ? 0 : -1}
+                  text='Logout'
+                  toUrl='/'
+                />
+              </Spacer>
+            </div>
+          </>
         }
       </>
     )

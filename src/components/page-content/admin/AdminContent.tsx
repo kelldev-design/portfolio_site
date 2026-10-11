@@ -5,6 +5,7 @@ import {
 } from 'react'
 import styled from 'styled-components'
 import { AdminContentStyles } from './AdminContentStyles'
+import { CreatePortfolioItemForm } from './CreatePortfolioItemForm'
 import { Image } from '../../common/image/Image'
 import { TagH } from '../../common/tag-h/TagH'
 import { TagLi } from '../../common/tag-li/TagLi'
@@ -85,9 +86,7 @@ const AdminContent: FunctionComponent = () => {
                   Create
                 </TagH>
               </Spacer>
-              <div>
-                Create form
-              </div>
+              <CreatePortfolioItemForm />
             </Spacer>
           </FlexWrapper>
         </Spacer>

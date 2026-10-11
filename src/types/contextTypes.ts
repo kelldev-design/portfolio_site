@@ -22,6 +22,8 @@ export interface PortfolioContextStateType {
 }
 
 export type PortfolioContextValueType = PortfolioContextStateType & {
+  handleLogin: (token: string) => void
+  handleLogout: () => void
   handleNavigation: HandleNavigationFunctionType
   setIsMobileNavOpen: Dispatch<SetStateAction<boolean>>
   handleNavigationComplete: () => void
