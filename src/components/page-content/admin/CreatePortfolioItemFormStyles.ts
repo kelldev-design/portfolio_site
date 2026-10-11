@@ -1,7 +1,6 @@
 import { css } from 'styled-components'
 import {
   GREY1,
-  GREY2,
   GREY3,
   LINK1,
   STATUS_BAD,
@@ -71,10 +70,5 @@ export const CreatePortfolioItemFormStyles = css`
       background-color: ${GREY3};
       cursor: default;
     }
-  }
-
-  .form-hint {
-    color: ${GREY2};
-    font-size: 12px;
   }
 `

@@ -7,17 +7,20 @@ const ButtonCustomStyled = styled.button`${ButtonCustomStyles}`
 interface ButtonCustomPropsType {
   onClick: ReactEventHandler
   title: string
+  type?: 'button' | 'submit'
   children: ReactNode
 }
 
 export const ButtonCustom: FunctionComponent<ButtonCustomPropsType> = ({
   children,
   onClick,
-  title
+  title,
+  type = 'button'
 }) =>
   <ButtonCustomStyled
     onClick={onClick}
     title={title}
+    type={type}
   >
     { children }
   </ButtonCustomStyled>
