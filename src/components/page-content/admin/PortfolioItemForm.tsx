@@ -8,15 +8,18 @@ import {
 } from 'react'
 import { useMutation } from '@apollo/client'
 import styled from 'styled-components'
-import { CreatePortfolioItemFormStyles } from './CreatePortfolioItemFormStyles'
+import { PortfolioItemFormStyles } from './PortfolioItemFormStyles'
 import {
   CREATE_PORTFOLIO_ITEMS,
-  GET_PORTFOLIO_ITEMS
+  GET_PORTFOLIO_ITEMS,
+  UPDATE_PORTFOLIO_ITEM
 } from '../../../queries/graphQL'
 import { type PortfolioContextValueType } from '../../../types/contextTypes'
 import {
   type CreatePortfolioItemInput,
-  type CreatePortfolioItemResponse
+  type CreatePortfolioItemResponse,
+  type PortfolioItem,
+  type UpdatePortfolioItemResponse
 } from '../../../types/generatedGQLTypes'
 import { ButtonCustom } from '../../common/button-custom/ButtonCustom'
 import { CheckboxCustom } from '../../common/checkbox-custom/CheckboxCustom'
@@ -25,7 +28,7 @@ import { LinkCustom } from '../../common/link-custom/LinkCustom'
 import { Spacer } from '../../layout/spacer/Spacer'
 import { PortfolioContext } from '../../wrappers/PortfolioContextProvider'
 
-const CreatePortfolioItemFormStyled = styled.div`${CreatePortfolioItemFormStyles}`
+const PortfolioItemFormStyled = styled.div`${PortfolioItemFormStyles}`
 
 interface LinkRowType {
   isInternal: boolean
@@ -48,6 +51,17 @@ interface FormStateType {
 
 interface CreateMutationDataType {
   createPortfolioItem: CreatePortfolioItemResponse
+}
+
+interface UpdateMutationDataType {
+  updatePortfolioItem: UpdatePortfolioItemResponse
+}
+
+interface PortfolioItemFormPropsType {
+  /** The item to edit. Without one the form creates a new item. */
+  portfolioItem?: PortfolioItem
+  /** Called with the item's projectId after an edit is saved, which may have changed it. */
+  onSaved?: (projectId: string) => void
 }
 
 type FormErrorsType = Record<string, string>
@@ -74,6 +88,26 @@ const initialFormState: FormStateType = {
   projectImages: []
 }
 
+const toLinkRows = (links: PortfolioItem['githubLinks']): LinkRowType[] =>
+  (links ?? []).map(({ isInternal, label, url }) => ({
+    isInternal,
+    label,
+    url
+  }))
+
+const toFormState = (portfolioItem: PortfolioItem): FormStateType => ({
+  categories: portfolioItem.categories.map(({ name }) => name),
+  description: portfolioItem.description,
+  githubLinks: toLinkRows(portfolioItem.githubLinks),
+  homeImage: portfolioItem.homeImage.imageUrl,
+  name: portfolioItem.name,
+  primaryImage: portfolioItem.primaryImage.imageUrl,
+  productLinks: toLinkRows(portfolioItem.productLinks),
+  products: portfolioItem.products.map(({ name }) => name),
+  projectId: portfolioItem.projectId,
+  projectImages: portfolioItem.projectImages.map(({ imageUrl }) => imageUrl)
+})
+
 const isAbsoluteUrl = (value: string): boolean => {
   try {
     const { protocol } = new URL(value)
@@ -84,21 +118,37 @@ const isAbsoluteUrl = (value: string): boolean => {
   }
 }
 
-export const CreatePortfolioItemForm: FunctionComponent = () => {
+export const PortfolioItemForm: FunctionComponent<PortfolioItemFormPropsType> = ({
+  onSaved,
+  portfolioItem
+}) => {
   const {
     portfolioMap,
     projectIds
   } = useContext(PortfolioContext) as PortfolioContextValueType
 
   const [ errors, setErrors ] = useState<FormErrorsType>({})
-  const [ formState, setFormState ] = useState<FormStateType>(initialFormState)
+  const [ formState, setFormState ] = useState<FormStateType>(() => portfolioItem ? toFormState(portfolioItem) : initialFormState)
   const [ submitError, setSubmitError ] = useState('')
-  const [ createdProjectId, setCreatedProjectId ] = useState('')
+  const [ savedProjectId, setSavedProjectId ] = useState('')
+  const isEditing = !!portfolioItem
 
-  const [ createPortfolioItem, { loading }] = useMutation<CreateMutationDataType>(
+  const [ createPortfolioItem, { loading: isCreating }] = useMutation<CreateMutationDataType>(
     CREATE_PORTFOLIO_ITEMS,
     { refetchQueries: [{ query: GET_PORTFOLIO_ITEMS }] }
   )
+
+  // Awaited so the list has the saved values, including a changed projectId, before
+  // onSaved selects the item by it.
+  const [ updatePortfolioItem, { loading: isUpdating }] = useMutation<UpdateMutationDataType>(
+    UPDATE_PORTFOLIO_ITEM,
+    {
+      awaitRefetchQueries: true,
+      refetchQueries: [{ query: GET_PORTFOLIO_ITEMS }]
+    }
+  )
+
+  const loading = isCreating || isUpdating
 
   const setField = (
     field: keyof FormStateType,
@@ -250,14 +300,16 @@ export const CreatePortfolioItemForm: FunctionComponent = () => {
 
   const validate = (input: CreatePortfolioItemInput): FormErrorsType => {
     const formErrors: FormErrorsType = {}
-    const nameExists = projectIds.some(projectId => portfolioMap[projectId].name === input.name)
+    // The item being edited is allowed to keep its own name and projectId.
+    const nameExists = projectIds.some(projectId =>
+      projectId !== portfolioItem?.projectId && portfolioMap[projectId].name === input.name)
 
     if (input.name === '') formErrors.name = 'A name is required.'
     else if (nameExists) formErrors.name = 'A project with this name already exists.'
 
     if (input.projectId === '') formErrors.projectId = 'A project id is required.'
     else if (!PROJECT_ID_PATTERN.test(input.projectId)) formErrors.projectId = 'Only letters, numbers and hyphens are allowed.'
-    else if (portfolioMap[input.projectId]) formErrors.projectId = 'A project with this project id already exists.'
+    else if (portfolioMap[input.projectId] && input.projectId !== portfolioItem?.projectId) formErrors.projectId = 'A project with this project id already exists.'
 
     if (input.description === '') formErrors.description = 'A description is required.'
     if (input.categories.length === 0) formErrors.categories = 'Select at least one category.'
@@ -298,11 +350,35 @@ export const CreatePortfolioItemForm: FunctionComponent = () => {
     const input = buildInput()
     const formErrors = validate(input)
 
-    setCreatedProjectId('')
+    setSavedProjectId('')
     setSubmitError('')
     setErrors(formErrors)
 
     if (Object.keys(formErrors).length > 0) return
+
+    if (portfolioItem) {
+      void updatePortfolioItem({
+        variables: {
+          id: portfolioItem.id,
+          input
+        }
+      })
+        .then(({ data }) => {
+          const response = data?.updatePortfolioItem
+
+          if (!response?.success) {
+            setSubmitError(response?.message ?? 'The project could not be saved.')
+
+            return
+          }
+
+          setSavedProjectId(input.projectId)
+          onSaved?.(input.projectId)
+        })
+        .catch((error: Error) => { setSubmitError(error.message) })
+
+      return
+    }
 
     void createPortfolioItem({ variables: { input } })
       .then(({ data }) => {
@@ -314,7 +390,7 @@ export const CreatePortfolioItemForm: FunctionComponent = () => {
           return
         }
 
-        setCreatedProjectId(input.projectId)
+        setSavedProjectId(input.projectId)
         setFormState(initialFormState)
       })
       .catch((error: Error) => { setSubmitError(error.message) })
@@ -460,7 +536,7 @@ export const CreatePortfolioItemForm: FunctionComponent = () => {
     </>
 
   return (
-    <CreatePortfolioItemFormStyled>
+    <PortfolioItemFormStyled>
       <form onSubmit={handleSubmit}>
         <Spacer
           b={1}
@@ -470,7 +546,7 @@ export const CreatePortfolioItemForm: FunctionComponent = () => {
         >
           <InputCustom
             error={errors.name}
-            id='create-name'
+            id='portfolio-item-name'
             label='Name'
             onChange={handleTextChange('name')}
             value={formState.name}
@@ -484,7 +560,7 @@ export const CreatePortfolioItemForm: FunctionComponent = () => {
         >
           <InputCustom
             error={errors.projectId}
-            id='create-project-id'
+            id='portfolio-item-project-id'
             label='Project id'
             onChange={handleTextChange('projectId')}
             placeholder='letters, numbers and hyphens only'
@@ -499,7 +575,7 @@ export const CreatePortfolioItemForm: FunctionComponent = () => {
         >
           <InputCustom
             error={errors.description}
-            id='create-description'
+            id='portfolio-item-description'
             label='Description'
             onChange={handleTextChange('description')}
             rows={12}
@@ -522,7 +598,7 @@ export const CreatePortfolioItemForm: FunctionComponent = () => {
             <div className='form-checkbox-group'>
               { CATEGORY_OPTIONS.map(category => (
                 <CheckboxCustom
-                  id={`create-category-${category}`}
+                  id={`portfolio-item-category-${category}`}
                   isChecked={formState.categories.includes(category)}
                   key={category}
                   label={category}
@@ -553,7 +629,7 @@ export const CreatePortfolioItemForm: FunctionComponent = () => {
         >
           <InputCustom
             error={errors.homeImage}
-            id='create-home-image'
+            id='portfolio-item-home-image'
             label='Home image url'
             onChange={handleTextChange('homeImage')}
             value={formState.homeImage}
@@ -567,7 +643,7 @@ export const CreatePortfolioItemForm: FunctionComponent = () => {
         >
           <InputCustom
             error={errors.primaryImage}
-            id='create-primary-image'
+            id='portfolio-item-primary-image'
             label='Primary image url'
             onChange={handleTextChange('primaryImage')}
             value={formState.primaryImage}
@@ -611,14 +687,14 @@ export const CreatePortfolioItemForm: FunctionComponent = () => {
         </Spacer>
         { submitError && <div className='form-error'>{ submitError }</div> }
         {
-          createdProjectId &&
+          savedProjectId &&
           <div className='form-success'>
-            <span>Project created. </span>
+            <span>{ isEditing ? 'Changes saved. ' : 'Project created. ' }</span>
             <LinkCustom
               hasLinkStyling
-              to={`/project/${createdProjectId}`}
+              to={`/project/${savedProjectId}`}
             >
-              { `View /project/${createdProjectId}` }
+              { `View /project/${savedProjectId}` }
             </LinkCustom>
           </div>
         }
@@ -633,10 +709,12 @@ export const CreatePortfolioItemForm: FunctionComponent = () => {
             disabled={loading}
             type='submit'
           >
-            { loading ? 'Creating…' : 'Create project' }
+            { isEditing
+              ? loading ? 'Saving…' : 'Save changes'
+              : loading ? 'Creating…' : 'Create project' }
           </button>
         </Spacer>
       </form>
-    </CreatePortfolioItemFormStyled>
+    </PortfolioItemFormStyled>
   )
 }

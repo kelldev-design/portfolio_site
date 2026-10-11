@@ -11,7 +11,7 @@ import {
   SPACING_Y
 } from '../../../utils/constants/spacings'
 
-export const CreatePortfolioItemFormStyles = css`
+export const PortfolioItemFormStyles = css`
   .form-field-label {
     color: ${GREY3};
     font-size: 11px;

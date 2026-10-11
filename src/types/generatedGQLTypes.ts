@@ -64,10 +64,36 @@ export interface LinkType {
   name: Scalars['String']['output']
 }
 
+export interface MarketObservation {
+  __typename?: 'MarketObservation'
+  date: Scalars['String']['output']
+  value: Scalars['Float']['output']
+}
+
+export interface MarketSeries {
+  __typename?: 'MarketSeries'
+  category: Scalars['String']['output']
+  fredId: Scalars['String']['output']
+  label: Scalars['String']['output']
+  lastFetchedAt?: Maybe<Scalars['String']['output']>
+  /**
+   * The most recent observation for the series overall. Unaffected by `from`/`to`,
+   * so a windowed chart query still reports the current value.
+   */
+  latest?: Maybe<MarketObservation>
+  /** Observations for the series, narrowed by the `from`/`to` query arguments. */
+  observations: MarketObservation[]
+  /** The observation before `latest`, for computing the change. Unaffected by `from`/`to`. */
+  previous?: Maybe<MarketObservation>
+  unit: Scalars['String']['output']
+}
+
 export interface Mutation {
   __typename?: 'Mutation'
   createPortfolioItem: CreatePortfolioItemResponse
   login: AuthResponse
+  /** Replaces every field of the item with `id`. Takes the same input as `createPortfolioItem`. */
+  updatePortfolioItem: UpdatePortfolioItemResponse
 }
 
 export interface MutationCreatePortfolioItemArgs {
@@ -77,6 +103,11 @@ export interface MutationCreatePortfolioItemArgs {
 export interface MutationLoginArgs {
   password: Scalars['String']['input']
   username: Scalars['String']['input']
+}
+
+export interface MutationUpdatePortfolioItemArgs {
+  id: Scalars['Int']['input']
+  input: CreatePortfolioItemInput
 }
 
 export interface PortfolioItem {
@@ -118,7 +149,51 @@ export interface Query {
   categories: Category[]
   linkTypes: LinkType[]
   links: Link[]
+  marketSeries: MarketSeries[]
   portfolioItems: PortfolioItem[]
   products: Product[]
   projectImages: ProjectImage[]
+  yieldCurve: YieldCurve
+}
+
+export interface QueryMarketSeriesArgs {
+  category?: InputMaybe<Scalars['String']['input']>
+  from?: InputMaybe<Scalars['String']['input']>
+  ids?: InputMaybe<Array<Scalars['String']['input']>>
+  to?: InputMaybe<Scalars['String']['input']>
+}
+
+export interface QueryYieldCurveArgs {
+  date?: InputMaybe<Scalars['String']['input']>
+}
+
+export interface UpdatePortfolioItemResponse {
+  __typename?: 'UpdatePortfolioItemResponse'
+  code: Scalars['Int']['output']
+  message: Scalars['String']['output']
+  portfolioItem?: Maybe<PortfolioItem>
+  success: Scalars['Boolean']['output']
+}
+
+export interface YieldCurve {
+  __typename?: 'YieldCurve'
+  comparisons: YieldCurveComparison[]
+  date: Scalars['String']['output']
+  points: YieldCurvePoint[]
+}
+
+export interface YieldCurveComparison {
+  __typename?: 'YieldCurveComparison'
+  date: Scalars['String']['output']
+  key: Scalars['String']['output']
+  label: Scalars['String']['output']
+  points: YieldCurvePoint[]
+}
+
+export interface YieldCurvePoint {
+  __typename?: 'YieldCurvePoint'
+  fredId: Scalars['String']['output']
+  label: Scalars['String']['output']
+  months: Scalars['Int']['output']
+  value?: Maybe<Scalars['Float']['output']>
 }

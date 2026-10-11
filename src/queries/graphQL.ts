@@ -3,6 +3,7 @@ import { gql } from '@apollo/client'
 export const GET_PORTFOLIO_ITEMS = gql`
   query GetPortfolioItems {
     portfolioItems {
+      id
       githubLinks {
         url
         label
@@ -70,6 +71,20 @@ export const CREATE_PORTFOLIO_ITEMS = gql`
         projectImages {
           imageUrl
         }
+      }
+    }
+  }
+`
+
+export const UPDATE_PORTFOLIO_ITEM = gql`
+  mutation UpdatePortfolioItem($id: Int!, $input: CreatePortfolioItemInput!) {
+    updatePortfolioItem(id: $id, input: $input) {
+      code
+      message
+      success
+      portfolioItem {
+        id
+        projectId
       }
     }
   }
