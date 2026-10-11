@@ -36,75 +36,52 @@ export const GET_PORTFOLIO_ITEMS = gql`
 `
 
 export const CREATE_PORTFOLIO_ITEMS = gql`
-  mutation CreatePortfolioItem(
-    $categories: [Int!]!,
-    $description: String!,
-    $links: [Int!]!,
-    $homeImage: Int!,
-    $projectImages: [Int!]!,
-    $name: String!,
-    $primaryImage: Int!,
-    $products: [Int!]!,
-    $projectId: String!) {
-    createPortfolioItem(categories: $categories,
-    description: $description,
-    links: $links,
-    homeImage: $homeImage,
-    projectImages: $projectImages,
-    name: $name,
-    primaryImage: $primaryImage,
-    products: $products,
-    projectId: $projectId
-  ) {
+  mutation CreatePortfolioItem($input: CreatePortfolioItemInput!) {
+    createPortfolioItem(input: $input) {
+      code
+      message
       success
       portfolioItem {
         categories {
-          id
           name
         }
         description
         githubLinks {
-          id
-          isInternal
-          label
-          type {
-            id
-            name
-          }
-          url
-        }
-        links {
-          id
           isInternal
           label
           url
         }
         homeImage {
-          id
-          imageUrl
-        }
-        id
-        projectImages {
-          id
           imageUrl
         }
         name
         primaryImage {
-          id
           imageUrl
         }
         productLinks {
-          id
           isInternal
           label
           url
         }
         products {
-          id
           name
         }
         projectId
+        projectImages {
+          imageUrl
+        }
       }
+    }
+  }
+`
+
+export const LOGIN = gql`
+  mutation Login($username: String!, $password: String!) {
+    login(username: $username, password: $password) {
+      code
+      message
+      success
+      token
     }
   }
 `

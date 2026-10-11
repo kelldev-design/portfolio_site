@@ -14,10 +14,39 @@ export interface Scalars {
   Float: { input: number, output: number }
 }
 
+export interface AuthResponse {
+  __typename?: 'AuthResponse'
+  code: Scalars['Int']['output']
+  message: Scalars['String']['output']
+  success: Scalars['Boolean']['output']
+  token?: Maybe<Scalars['String']['output']>
+}
+
 export interface Category {
   __typename?: 'Category'
   id: Scalars['Int']['output']
   name: Scalars['String']['output']
+}
+
+export interface CreatePortfolioItemInput {
+  categories: Array<Scalars['String']['input']>
+  description: Scalars['String']['input']
+  githubLinks: PortfolioLinkInput[]
+  homeImage: Scalars['String']['input']
+  name: Scalars['String']['input']
+  primaryImage: Scalars['String']['input']
+  productLinks: PortfolioLinkInput[]
+  products: Array<Scalars['String']['input']>
+  projectId: Scalars['String']['input']
+  projectImages: Array<Scalars['String']['input']>
+}
+
+export interface CreatePortfolioItemResponse {
+  __typename?: 'CreatePortfolioItemResponse'
+  code: Scalars['Int']['output']
+  message: Scalars['String']['output']
+  portfolioItem?: Maybe<PortfolioItem>
+  success: Scalars['Boolean']['output']
 }
 
 export interface Link {
@@ -35,6 +64,21 @@ export interface LinkType {
   name: Scalars['String']['output']
 }
 
+export interface Mutation {
+  __typename?: 'Mutation'
+  createPortfolioItem: CreatePortfolioItemResponse
+  login: AuthResponse
+}
+
+export interface MutationCreatePortfolioItemArgs {
+  input: CreatePortfolioItemInput
+}
+
+export interface MutationLoginArgs {
+  password: Scalars['String']['input']
+  username: Scalars['String']['input']
+}
+
 export interface PortfolioItem {
   __typename?: 'PortfolioItem'
   categories: Category[]
@@ -49,6 +93,12 @@ export interface PortfolioItem {
   products: Product[]
   projectId: Scalars['String']['output']
   projectImages: ProjectImage[]
+}
+
+export interface PortfolioLinkInput {
+  isInternal: Scalars['Boolean']['input']
+  label: Scalars['String']['input']
+  url: Scalars['String']['input']
 }
 
 export interface Product {
