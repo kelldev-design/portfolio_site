@@ -30,16 +30,32 @@ export const PortfolioItemFormStyles = css`
     min-width: 0px;
   }
 
+  /* As tall as an input, so actions line up with the field beside them. */
   .form-row-action {
+    align-items: center;
     color: ${LINK1};
+    display: flex;
+    flex-shrink: 0;
     font-size: 12px;
-    padding-bottom: ${SPACING_Y};
+    min-height: 31px;
+  }
+
+  /* Image rows have no visible labels, so everything centers on the input. */
+  .form-row-centered {
+    align-items: center;
   }
 
   .form-row-thumbnail {
+    display: flex;
     flex-shrink: 0;
-    padding-bottom: ${SPACING_Y};
+    justify-content: center;
     width: 40px;
+
+    img {
+      display: block;
+      max-height: 31px;
+      object-fit: contain;
+    }
   }
 
   .form-hint {
@@ -56,6 +72,20 @@ export const PortfolioItemFormStyles = css`
   .form-add-action {
     color: ${LINK1};
     font-size: 12px;
+    margin-top: 6px;
+  }
+
+  /* Buttons do not inherit font or color, so without this they render in the browser's
+     default black system font instead of as the links they are styled to be. */
+  .form-row-action button,
+  .form-add-action button {
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+
+    &:hover {
+      text-decoration: underline;
+    }
   }
 
   .form-error {

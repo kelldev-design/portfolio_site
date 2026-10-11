@@ -12,6 +12,8 @@ interface InputCustomPropsType {
   autoComplete?: string
   error?: string
   id: string
+  /** Hides the label visually, for rows under a shared heading. Screen readers still read it. */
+  isLabelHidden?: boolean
   label: string
   onChange: ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement>
   placeholder?: string
@@ -24,6 +26,7 @@ export const InputCustom: FunctionComponent<InputCustomPropsType> = ({
   autoComplete,
   error,
   id,
+  isLabelHidden,
   label,
   onChange,
   placeholder,
@@ -61,7 +64,7 @@ export const InputCustom: FunctionComponent<InputCustomPropsType> = ({
   return (
     <InputCustomStyled>
       <label
-        className='input-label'
+        className={isLabelHidden ? 'input-label-hidden' : 'input-label'}
         htmlFor={id}
       >
         { label }

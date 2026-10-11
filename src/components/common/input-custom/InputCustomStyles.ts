@@ -24,6 +24,7 @@ export const InputCustomStyles = css`
     background-color: #fff;
     border: 1px solid #e0e0e0;
     border-radius: 4px;
+    box-sizing: border-box;
     color: ${GREY2};
     font-family: inherit;
     font-size: 13px;
@@ -35,6 +36,16 @@ export const InputCustomStyles = css`
       outline: 1px dashed ${LINK1};
       border-color: ${LINK1};
     }
+  }
+
+  /* Hidden from view but still read as the field's label by screen readers. */
+  .input-label-hidden {
+    clip: rect(0px, 0px, 0px, 0px);
+    height: 1px;
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
   }
 
   .input-error {

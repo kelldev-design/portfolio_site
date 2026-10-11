@@ -472,7 +472,7 @@ export const PortfolioItemForm: FunctionComponent<PortfolioItemFormPropsType> = 
                 r={0}
                 t={0.5}
               >
-                <div className='form-row'>
+                <div className='form-row form-row-centered'>
                   <div className='form-row-action'>
                     <DragHandle
                       handleProps={handleProps}
@@ -491,6 +491,7 @@ export const PortfolioItemForm: FunctionComponent<PortfolioItemFormPropsType> = 
                     <InputCustom
                       error={errors[`projectImages-${key}`]}
                       id={`projectImages-${key}`}
+                      isLabelHidden
                       label={`Project image ${index + 1}`}
                       onChange={handleImageRowChange(key)}
                       value={url}
@@ -549,6 +550,7 @@ export const PortfolioItemForm: FunctionComponent<PortfolioItemFormPropsType> = 
               <InputCustom
                 error={errors[`${field}-${index}`]}
                 id={`${field}-${index}`}
+                isLabelHidden
                 label={`${label} ${index + 1}`}
                 onChange={handleStringRowChange(
                   field,
@@ -604,6 +606,7 @@ export const PortfolioItemForm: FunctionComponent<PortfolioItemFormPropsType> = 
               <InputCustom
                 error={errors[`${field}-${index}-label`]}
                 id={`${field}-${index}-label`}
+                isLabelHidden={index > 0}
                 label='Label'
                 onChange={handleLinkRowChange(
                   field,
@@ -617,6 +620,7 @@ export const PortfolioItemForm: FunctionComponent<PortfolioItemFormPropsType> = 
               <InputCustom
                 error={errors[`${field}-${index}-url`]}
                 id={`${field}-${index}-url`}
+                isLabelHidden={index > 0}
                 label='Url'
                 onChange={handleLinkRowChange(
                   field,
