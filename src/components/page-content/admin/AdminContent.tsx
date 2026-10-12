@@ -135,7 +135,7 @@ const AdminContent: FunctionComponent = () => {
             >
               <Image
                 altText={projectItem.name}
-                src={projectItem.primaryImage.imageUrl}
+                src={projectItem.homeImage.imageUrl}
                 width='40px'
               />
               <span>{ projectItem.name }</span>
