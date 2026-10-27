@@ -18,6 +18,7 @@ import { Markets } from './routes/Markets'
 import { Movies } from './routes/Movies'
 import { Project } from './routes/Project'
 import { ProjectDemo } from './routes/ProjectDemo'
+import { RoomPlanner } from './routes/RoomPlanner'
 
 const AppStyled = styled.div`${appStyles}`
 
@@ -72,6 +73,23 @@ const router = createBrowserRouter([
       {
         path: '/admin',
         element: <ProtectedRoute><Admin /></ProtectedRoute>
+      }
+    ]
+  },
+  /* Standalone pages that need no portfolio data, so they sit outside its provider and
+     never wait on the portfolio query. The header reads that provider, so they have none. */
+  {
+    element: (
+      <KeyCommandProvider>
+        <AppStyled>
+          <Outlet />
+        </AppStyled>
+      </KeyCommandProvider>
+    ),
+    children: [
+      {
+        path: '/room-planner',
+        element: <RoomPlanner />
       }
     ]
   }
