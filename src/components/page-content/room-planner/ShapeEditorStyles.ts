@@ -93,6 +93,11 @@ export const ShapeEditorStyles = css`
     &.is-selected {
       fill-opacity: 0.55;
     }
+
+    /* Picked up by pressing and holding, ready to drag. */
+    &.is-lifted {
+      fill-opacity: 0.75;
+    }
   }
 
   .shape-editor-delete-handle {

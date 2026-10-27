@@ -28,6 +28,7 @@ import {
   type PlacementType,
   type RoomType
 } from '../../../types/roomPlannerTypes'
+import { useDragGate } from '../../hooks/useDragGate'
 import { useElementSize } from '../../hooks/useElementSize'
 
 const RoomPlanStyled = styled.div`${RoomPlanStyles}`
@@ -84,6 +85,8 @@ export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
   const svgRef = useRef<SVGSVGElement>(null)
   const svgSize = useElementSize(svgRef)
   const dragRef = useRef<DragType | null>(null)
+  // A first tap only selects; see useDragGate.
+  const dragGate = useDragGate()
   const roomSize = shapeSize(room.rects)
   const floorClipId = `room-floor-${room.id}`
 
@@ -154,6 +157,11 @@ export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
     placement: PlacementType
   ): void => {
     event.stopPropagation()
+    dragGate.begin(
+      event,
+      placement.id,
+      placement.id === selectedPlacementId
+    )
     onSelect(placement.id)
 
     const point = toSvgPoint(
@@ -175,6 +183,11 @@ export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
     door: DoorType
   ): void => {
     event.stopPropagation()
+    dragGate.begin(
+      event,
+      door.id,
+      door.id === selectedDoorId
+    )
     onDoorSelect(door.id)
     dragRef.current = { id: door.id, kind: 'door' }
     svgRef.current?.setPointerCapture(event.pointerId)
@@ -183,7 +196,7 @@ export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
   const handlePointerMove = (event: PointerEvent<SVGSVGElement>): void => {
     const drag = dragRef.current
 
-    if (!drag) return
+    if (!drag || !dragGate.allowsMove(event)) return
 
     const point = toSvgPoint(
       svgRef.current,
@@ -221,6 +234,7 @@ export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
 
   const handlePointerUp = (event: PointerEvent<SVGSVGElement>): void => {
     dragRef.current = null
+    dragGate.end()
 
     if (svgRef.current?.hasPointerCapture(event.pointerId)) {
       svgRef.current.releasePointerCapture(event.pointerId)
@@ -407,7 +421,7 @@ export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
         aria-label={door.kind === 'opening'
           ? `Entryway, ${door.width} inches wide`
           : `Door, ${door.width} inches wide, swinging ${door.swing === 'in' ? 'into' : 'out of'} the room`}
-        className={`room-plan-door ${door.id === selectedDoorId ? 'is-selected' : ''}`}
+        className={`room-plan-door ${door.id === selectedDoorId ? 'is-selected' : ''} ${door.id === dragGate.liftedKey ? 'is-lifted' : ''}`}
         key={door.id}
         onKeyDown={event => {
           if (event.key !== 'Delete' && event.key !== 'Backspace') return
@@ -481,7 +495,7 @@ export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
     return (
       <g
         aria-label={`${furniture.name}, ${size.width} by ${size.depth} inches, at ${placement.x}, ${placement.y}${isOutside ? ', partly outside the room' : ''}`}
-        className={`room-plan-piece ${isSelected ? 'is-selected' : ''} ${isOutside ? 'is-outside' : ''}`}
+        className={`room-plan-piece ${isSelected ? 'is-selected' : ''} ${isOutside ? 'is-outside' : ''} ${placement.id === dragGate.liftedKey ? 'is-lifted' : ''}`}
         key={placement.id}
         onKeyDown={event => {
           handleKeyDown(
@@ -527,6 +541,7 @@ export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
     <RoomPlanStyled>
       <svg
         className='room-plan'
+        onPointerCancel={handlePointerUp}
         onPointerDown={() => { onSelect('') }}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}

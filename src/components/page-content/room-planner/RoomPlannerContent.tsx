@@ -791,9 +791,9 @@ const RoomPlannerContent: FunctionComponent = () => {
     if (!selectedPlacement || !item) {
       return (
         <p className='room-planner-hint'>
-          Drag furniture to move it. Select a piece to set its exact position, rotate it or remove it.
+          Tap furniture to select it, then drag it to move it, or press and hold to pick it up and drag straight away.
           Arrow keys nudge the selected piece an inch, or a foot with shift held, R rotates it and D duplicates it.
-          Drag a door or entryway along the walls; select it to change its width or which way a door opens.
+          Doors and entryways work the same way and slide along the walls; select one to change its width or which way a door opens.
         </p>
       )
     }

@@ -28,6 +28,7 @@ import {
 import { type RectType } from '../../../types/roomPlannerTypes'
 import { InputCustom } from '../../common/input-custom/InputCustom'
 import { SelectCustom } from '../../common/select-custom/SelectCustom'
+import { useDragGate } from '../../hooks/useDragGate'
 import { useElementSize } from '../../hooks/useElementSize'
 
 const ShapeEditorStyled = styled.div`${ShapeEditorStyles}`
@@ -116,6 +117,8 @@ export const ShapeEditor: FunctionComponent<ShapeEditorPropsType> = ({
   // Pointer handlers read the drag and draft from refs: several pointer events can arrive
   // before React renders, and state read in them would still be the last render's.
   const dragRef = useRef<DragType | null>(null)
+  // A first tap on a rectangle only selects it; see useDragGate.
+  const dragGate = useDragGate()
   const draftRef = useRef<RectType | null>(null)
   const [ draft, setDraft ] = useState<RectType | null>(null)
   const [ dragCanvas, setDragCanvas ] = useState<SizeType | null>(null)
@@ -222,6 +225,11 @@ export const ShapeEditor: FunctionComponent<ShapeEditorPropsType> = ({
       event
     )
 
+    dragGate.begin(
+      event,
+      String(index),
+      index === selectedIndex
+    )
     setSelectedIndex(index)
     startDrag(
       event,
@@ -258,6 +266,8 @@ export const ShapeEditor: FunctionComponent<ShapeEditorPropsType> = ({
 
       return
     }
+
+    if (!dragGate.allowsMove(event)) return
 
     const point = toSvgPoint(
       svgRef.current,
@@ -298,6 +308,7 @@ export const ShapeEditor: FunctionComponent<ShapeEditorPropsType> = ({
     }
 
     dragRef.current = null
+    dragGate.end()
     updateDraft(null)
     setDragCanvas(null)
 
@@ -446,7 +457,7 @@ export const ShapeEditor: FunctionComponent<ShapeEditorPropsType> = ({
     index: number
   ): ReactElement =>
     <rect
-      className={`shape-editor-rect ${index === selectedIndex ? 'is-selected' : ''}`}
+      className={`shape-editor-rect ${index === selectedIndex ? 'is-selected' : ''} ${String(index) === dragGate.liftedKey ? 'is-lifted' : ''}`}
       fill={color}
       height={rect.depth}
       key={index}
@@ -466,8 +477,9 @@ export const ShapeEditor: FunctionComponent<ShapeEditorPropsType> = ({
       return (
         <p className='room-planner-hint'>
           Drag on empty grid to draw a rectangle, or add one and type its size. Rectangles that
-          overlap or touch merge into one shape. Click a rectangle to select it, drag it to move
-          it, and press × or Delete to remove it. Hold shift to draw starting inside a rectangle.
+          overlap or touch merge into one shape. Tap a rectangle to select it, then drag it to move
+          it, or press and hold to pick it up and drag straight away. Press × or Delete to remove
+          it. Hold shift to draw starting inside a rectangle.
         </p>
       )
     }
@@ -579,6 +591,7 @@ export const ShapeEditor: FunctionComponent<ShapeEditorPropsType> = ({
           aria-label='Shape canvas'
           className='shape-editor-canvas'
           onKeyDown={handleKeyDown}
+          onPointerCancel={handlePointerUp}
           onPointerDown={event => {
             startDraw(
               event,

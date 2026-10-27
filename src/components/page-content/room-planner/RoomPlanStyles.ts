@@ -85,6 +85,12 @@ export const RoomPlanStyles = css`
     vector-effect: non-scaling-stroke;
   }
 
+  /* A held door is also selected, so this outranks the selected style below. */
+  .room-plan-door.is-selected.is-lifted .room-plan-door-hit {
+    fill: ${LINK1};
+    fill-opacity: 0.2;
+  }
+
   .room-plan-door.is-selected,
   .room-plan-door:focus-visible {
     .room-plan-door-hit {
@@ -146,6 +152,11 @@ export const RoomPlanStyles = css`
     &:focus-visible .room-plan-piece-outline {
       stroke: ${LINK1};
       stroke-width: 3px;
+    }
+
+    /* Picked up by pressing and holding, ready to drag. */
+    &.is-lifted {
+      filter: drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.35));
     }
 
     /* After the selected styles, so an overhanging piece stays flagged while selected. */
