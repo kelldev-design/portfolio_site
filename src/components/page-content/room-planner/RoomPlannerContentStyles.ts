@@ -171,12 +171,20 @@ export const RoomPlannerContentStyles = css`
     }
   }
 
+  /* Takes the row's spare width, so the size beside it keeps its line unless even the
+     name's longest word leaves too little room. */
+  .room-planner-row-name {
+    flex: 1 1 0px;
+  }
+
   .room-planner-row-size {
     color: ${GREY3};
     font-size: 12px;
     font-weight: normal;
     margin-left: auto;
-    white-space: nowrap;
+    /* Wraps after the × when a row is too narrow for it, rather than running into the
+       row's actions. */
+    text-align: right;
   }
 
   .room-planner-swatch {
@@ -242,6 +250,12 @@ export const RoomPlannerContentStyles = css`
   }
 
   /* The selected piece's or door's controls, stacked to fit the sidebar. */
+  .room-planner-json {
+    display: flex;
+    flex-direction: column;
+    gap: ${SPACING_Y};
+  }
+
   .room-planner-selection {
     display: flex;
     flex-direction: column;

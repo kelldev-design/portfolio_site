@@ -463,7 +463,7 @@ export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
     )
   }
 
-  /* Rotate and remove buttons by the selected piece's top right corner, above it or below it
+  /* Duplicate, rotate and remove buttons by the selected piece's top right corner, above it or below it
      when there is no room above, kept the same size on screen however large the plan is. */
   const renderPlacementHandles = (placement: PlacementType): ReactElement | null => {
     const furniture = furnitureMap[placement.furnitureId]
@@ -484,10 +484,19 @@ export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
     const cy = above - radius < view.top ? placement.y + size.depth + gap + radius : above
     const arm = radius * 0.4
     const right = placement.x + size.width - radius
+    const step = radius * 2 + gap
     const handles = [
       {
+        className: 'is-duplicate',
+        cx: right - step * 2,
+        // Two overlapping squares.
+        icon: (cx: number): string => `M${cx - arm * 0.4} ${cy - arm * 1.1}h${arm * 1.5}v${arm * 1.5}M${cx - arm * 1.1} ${cy - arm * 0.4}h${arm * 1.5}v${arm * 1.5}h${-arm * 1.5}Z`,
+        label: `Duplicate ${furniture.name}`,
+        onActivate: () => { onDuplicate(placement.id) }
+      },
+      {
         className: 'is-rotate',
-        cx: right - radius * 2 - gap,
+        cx: right - step,
         // A three quarter circle clockwise from the top, with an arrowhead at its end.
         icon: (cx: number): string => `M${cx} ${cy - arm}A${arm} ${arm} 0 1 1 ${cx - arm} ${cy}M${cx - arm * 1.5} ${cy - arm * 0.5}L${cx - arm} ${cy}L${cx - arm * 0.5} ${cy - arm * 0.5}`,
         label: `Rotate ${furniture.name}`,

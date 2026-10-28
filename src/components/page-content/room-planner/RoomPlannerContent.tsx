@@ -16,6 +16,7 @@ import {
   formatInches,
   loadCollapsedSections,
   loadRoomPlanner,
+  ROOM_PLANNER_KEY,
   saveCollapsedSections,
   saveRoomPlanner
 } from './roomPlannerStorage'
@@ -46,6 +47,7 @@ import {
   SERIES4,
   SERIES5
 } from '../../../utils/constants/colors'
+import { JsonViewer, type JsonValueType } from '../../common/json-viewer/JsonViewer'
 import { TagH } from '../../common/tag-h/TagH'
 import { TagP } from '../../common/tag-p/TagP'
 
@@ -137,6 +139,7 @@ const RoomPlannerContent: FunctionComponent = () => {
   const [ selectedDoorId, setSelectedDoorId ] = useState('')
   const [ editing, setEditing ] = useState<EditingType | null>(null)
   const [ collapsed, setCollapsed ] = useState(loadCollapsedSections)
+  const [ copyStatus, setCopyStatus ] = useState('')
   // The sidebar element the shape editor puts its rectangle fields in.
   const [ detailsTarget, setDetailsTarget ] = useState<HTMLDivElement | null>(null)
 
@@ -605,7 +608,7 @@ const RoomPlannerContent: FunctionComponent = () => {
           onClick={() => { selectRoom(room.id) }}
           type='button'
         >
-          <span>{ room.name }</span>
+          <span className='room-planner-row-name'>{ room.name }</span>
           <span className='room-planner-row-size'>{ sizeLabel(room.rects) }</span>
         </button>
         { renderEditAction(
@@ -638,7 +641,7 @@ const RoomPlannerContent: FunctionComponent = () => {
           className='room-planner-swatch'
           style={{ backgroundColor: item.color }}
         />
-        <span>{ item.name }</span>
+        <span className='room-planner-row-name'>{ item.name }</span>
         <span className='room-planner-row-size'>{ sizeLabel(item.rects) }</span>
       </div>
       <button
@@ -837,32 +840,35 @@ const RoomPlannerContent: FunctionComponent = () => {
           onChange={handlePositionChange('y')}
           value={selectedPlacement.y}
         />
-        <div className='room-planner-selection-actions'>
-          <button
-            className='room-planner-submit'
-            onClick={() => { handleRotate(selectedPlacement.id) }}
-            type='button'
-          >
-            Rotate
-          </button>
-          <button
-            className='room-planner-row-action'
-            onClick={() => { handleDuplicate(selectedPlacement.id) }}
-            type='button'
-          >
-            Duplicate
-          </button>
-          <button
-            className='room-planner-row-action'
-            onClick={() => { handleRemove(selectedPlacement.id) }}
-            type='button'
-          >
-            Remove from room
-          </button>
-        </div>
       </div>
     )
   }
+
+  /* Copies the saved plan, exactly as this browser stores it, so it can be kept or moved
+     to another browser. */
+  const handleCopyJson = (): void => {
+    const stored = window.localStorage.getItem(ROOM_PLANNER_KEY) ?? JSON.stringify(plannerState)
+
+    navigator.clipboard.writeText(stored)
+      .then(() => { setCopyStatus('Copied to the clipboard.') })
+      .catch(() => { setCopyStatus('Could not copy. Check the browser allows clipboard access.') })
+  }
+
+  /* The saved plan, with a button to copy it above a viewer to browse it. */
+  const renderJson = (): ReactElement =>
+    <div className='room-planner-json'>
+      <div className='room-planner-selection-actions'>
+        <button
+          className='room-planner-submit'
+          onClick={handleCopyJson}
+          type='button'
+        >
+          Copy JSON
+        </button>
+        { copyStatus && <span className='room-planner-hint'>{ copyStatus }</span> }
+      </div>
+      <JsonViewer value={plannerState as unknown as JsonValueType} />
+    </div>
 
   const renderPlan = (): ReactElement => {
     if (!selectedRoom) {
@@ -989,6 +995,11 @@ const RoomPlannerContent: FunctionComponent = () => {
           'furniture',
           'Furniture',
           renderFurniture()
+        ) }
+        { renderSection(
+          'json',
+          'JSON',
+          renderJson()
         ) }
       </aside>
       { renderCard(
