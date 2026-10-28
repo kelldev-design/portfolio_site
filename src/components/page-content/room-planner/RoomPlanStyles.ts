@@ -116,6 +116,48 @@ export const RoomPlanStyles = css`
     }
   }
 
+  .room-plan-handle {
+    cursor: pointer;
+    outline: none;
+
+    circle {
+      fill: #fff;
+      stroke: ${LINK1};
+      stroke-width: 1.5px;
+      vector-effect: non-scaling-stroke;
+    }
+
+    path {
+      fill: none;
+      stroke: ${LINK1};
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 2px;
+      vector-effect: non-scaling-stroke;
+    }
+
+    &.is-remove circle,
+    &.is-remove path {
+      stroke: ${STATUS_BAD};
+    }
+
+    &:hover,
+    &:focus-visible {
+      circle {
+        fill: ${LINK1};
+      }
+
+      path {
+        stroke: #fff;
+      }
+    }
+
+    &.is-remove:hover circle,
+    &.is-remove:focus-visible circle {
+      fill: ${STATUS_BAD};
+    }
+  }
+
   .room-plan-piece {
     cursor: grab;
     outline: none;

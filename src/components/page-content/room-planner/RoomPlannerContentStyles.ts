@@ -205,6 +205,10 @@ export const RoomPlannerContentStyles = css`
       cursor: default;
       text-decoration: none;
     }
+
+    &.is-danger {
+      color: ${STATUS_BAD};
+    }
   }
 
   .room-planner-form {

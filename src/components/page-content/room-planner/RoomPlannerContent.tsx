@@ -655,6 +655,14 @@ const RoomPlannerContent: FunctionComponent = () => {
         item.id,
         item.name
       ) }
+      <button
+        className='room-planner-row-action is-danger'
+        onClick={() => { handleFurnitureDelete(item) }}
+        title={`Delete ${item.name}`}
+        type='button'
+      >
+        Delete
+      </button>
     </li>
 
   const renderFurniture = (): ReactElement =>

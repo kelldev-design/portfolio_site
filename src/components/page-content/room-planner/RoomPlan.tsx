@@ -89,6 +89,7 @@ export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
   const dragGate = useDragGate()
   const roomSize = shapeSize(room.rects)
   const floorClipId = `room-floor-${room.id}`
+  const selectedPlacement = room.placements.find(({ id }) => id === selectedPlacementId)
 
   // Room for the dimension labels around the plan.
   const padding = Math.max(
@@ -462,6 +463,76 @@ export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
     )
   }
 
+  /* Rotate and remove buttons by the selected piece's top right corner, above it or below it
+     when there is no room above, kept the same size on screen however large the plan is. */
+  const renderPlacementHandles = (placement: PlacementType): ReactElement | null => {
+    const furniture = furnitureMap[placement.furnitureId]
+
+    if (!furniture || !svgSize.width || !svgSize.height) return null
+
+    const size = placedSize(
+      furniture,
+      placement.rotation
+    )
+    const inchesPerPixel = Math.max(
+      (view.right - view.left) / svgSize.width,
+      (view.bottom - view.top) / svgSize.height
+    )
+    const radius = 12 * inchesPerPixel
+    const gap = 6 * inchesPerPixel
+    const above = placement.y - gap - radius
+    const cy = above - radius < view.top ? placement.y + size.depth + gap + radius : above
+    const arm = radius * 0.4
+    const right = placement.x + size.width - radius
+    const handles = [
+      {
+        className: 'is-rotate',
+        cx: right - radius * 2 - gap,
+        // A three quarter circle clockwise from the top, with an arrowhead at its end.
+        icon: (cx: number): string => `M${cx} ${cy - arm}A${arm} ${arm} 0 1 1 ${cx - arm} ${cy}M${cx - arm * 1.5} ${cy - arm * 0.5}L${cx - arm} ${cy}L${cx - arm * 0.5} ${cy - arm * 0.5}`,
+        label: `Rotate ${furniture.name}`,
+        onActivate: () => { onRotate(placement.id) }
+      },
+      {
+        className: 'is-remove',
+        cx: right,
+        icon: (cx: number): string => `M${cx - arm} ${cy - arm}L${cx + arm} ${cy + arm}M${cx + arm} ${cy - arm}L${cx - arm} ${cy + arm}`,
+        label: `Remove ${furniture.name} from the room`,
+        onActivate: () => { onRemove(placement.id) }
+      }
+    ]
+
+    return (
+      <g className='room-plan-handles'>
+        { handles.map(({ className, cx, icon, label, onActivate }) =>
+          <g
+            aria-label={label}
+            className={`room-plan-handle ${className}`}
+            key={className}
+            onClick={onActivate}
+            onKeyDown={event => {
+              if (event.key !== 'Enter' && event.key !== ' ') return
+
+              event.preventDefault()
+              onActivate()
+            }}
+            // Keeps the press from reaching the plan, which would clear the selection.
+            onPointerDown={event => { event.stopPropagation() }}
+            role='button'
+            tabIndex={0}
+          >
+            <title>{ label }</title>
+            <circle
+              cx={cx}
+              cy={cy}
+              r={radius}
+            />
+            <path d={icon(cx)} />
+          </g>) }
+      </g>
+    )
+  }
+
   const renderPlacement = (placement: PlacementType): ReactElement | null => {
     const furniture = furnitureMap[placement.furnitureId]
 
@@ -577,6 +648,7 @@ export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
         { renderWallLengths() }
         { room.doors.map(renderDoor) }
         { room.placements.map(renderPlacement) }
+        { selectedPlacement && renderPlacementHandles(selectedPlacement) }
       </svg>
     </RoomPlanStyled>
   )
