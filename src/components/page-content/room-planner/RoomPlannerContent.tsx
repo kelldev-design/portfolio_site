@@ -39,6 +39,7 @@ import {
   type PlacementType,
   type RectType,
   type RoomPlannerStateType,
+  type RoomShapeType,
   type RoomType,
   type RotationType
 } from '../../../types/roomPlannerTypes'
@@ -153,6 +154,7 @@ export const RoomPlannerContent: FunctionComponent<RoomPlannerContentPropsType> 
   const [ plannerState, setPlannerState ] = useState<RoomPlannerStateType>(initialState)
   const [ selectedPlacementId, setSelectedPlacementId ] = useState('')
   const [ selectedDoorId, setSelectedDoorId ] = useState('')
+  const [ selectedShapeId, setSelectedShapeId ] = useState('')
   const [ editing, setEditing ] = useState<EditingType | null>(null)
   const [ collapsed, setCollapsed ] = useState(loadCollapsedSections)
   const [ copyStatus, setCopyStatus ] = useState('')
@@ -163,6 +165,7 @@ export const RoomPlannerContent: FunctionComponent<RoomPlannerContentPropsType> 
   const selectedRoom = rooms.find(({ id }) => id === selectedRoomId)
   const selectedPlacement = selectedRoom?.placements.find(({ id }) => id === selectedPlacementId)
   const selectedDoor = selectedRoom?.doors.find(({ id }) => id === selectedDoorId)
+  const selectedShape = selectedRoom?.shapes.find(({ id }) => id === selectedShapeId)
 
   const furnitureMap = useMemo(
     () => Object.fromEntries(furniture.map(item => [ item.id, item ])) as Record<string, FurnitureType>,
@@ -187,15 +190,23 @@ export const RoomPlannerContent: FunctionComponent<RoomPlannerContentPropsType> 
     [ collapsed ]
   )
 
-  /* One thing is selected at a time: a piece of furniture or a door. */
+  /* One thing is selected at a time: a piece of furniture, a door or a shape. */
   const selectPlacement = (placementId: string): void => {
     setSelectedPlacementId(placementId)
     setSelectedDoorId('')
+    setSelectedShapeId('')
   }
 
   const selectDoor = (doorId: string): void => {
     setSelectedDoorId(doorId)
     setSelectedPlacementId('')
+    setSelectedShapeId('')
+  }
+
+  const selectShape = (shapeId: string): void => {
+    setSelectedShapeId(shapeId)
+    setSelectedPlacementId('')
+    setSelectedDoorId('')
   }
 
   const selectRoom = (roomId: string): void => {
@@ -299,6 +310,73 @@ export const RoomPlannerContent: FunctionComponent<RoomPlannerContentPropsType> 
     )
   }
 
+  const updateShapes = (update: (shapes: RoomShapeType[]) => RoomShapeType[]): void => {
+    setPlannerState(state => ({
+      ...state,
+      rooms: state.rooms.map(room => room.id === state.selectedRoomId
+        ? { ...room, shapes: update(room.shapes) }
+        : room)
+    }))
+  }
+
+  const updateShape = (
+    shapeId: string,
+    changes: Partial<RectType>
+  ): void => {
+    updateShapes(shapes => shapes.map(shape => shape.id === shapeId ? { ...shape, ...changes } : shape))
+  }
+
+  const handleShapeCreate = (rect: RectType): void => {
+    const shape: RoomShapeType = { ...rect, id: createId() }
+
+    updateShapes(shapes => [ ...shapes, shape ])
+    selectShape(shape.id)
+  }
+
+  const handleShapeRemove = (shapeId: string): void => {
+    selectShape('')
+    updateShapes(shapes => shapes.filter(({ id }) => id !== shapeId))
+  }
+
+  /* Typed sizes and positions keep the shape inside the room's bounding box. */
+  const handleShapeField = (
+    shape: RoomShapeType,
+    field: keyof RectType
+  ) => (inches: number): void => {
+    if (!selectedRoom) return
+
+    const room = shapeSize(selectedRoom.rects)
+    const next = { ...shape, [field]: inches }
+
+    updateShape(
+      shape.id,
+      {
+        depth: Math.max(
+          1,
+          Math.min(
+            next.depth,
+            room.depth
+          )
+        ),
+        width: Math.max(
+          1,
+          Math.min(
+            next.width,
+            room.width
+          )
+        ),
+        x: clamp(
+          next.x,
+          room.width - next.width
+        ),
+        y: clamp(
+          next.y,
+          room.depth - next.depth
+        )
+      }
+    )
+  }
+
   const handleDoorRemove = (doorId: string): void => {
     selectDoor('')
     updateDoors(doors => doors.filter(({ id }) => id !== doorId))
@@ -344,7 +422,8 @@ export const RoomPlannerContent: FunctionComponent<RoomPlannerContentPropsType> 
       id: createId(),
       name,
       placements: [],
-      rects
+      rects,
+      shapes: []
     }
 
     setPlannerState(state => ({
@@ -813,8 +892,64 @@ export const RoomPlannerContent: FunctionComponent<RoomPlannerContentPropsType> 
     )
   }
 
+  const renderShapeSelection = (shape: RoomShapeType): ReactElement =>
+    <div className='room-planner-selection'>
+      <div className='room-planner-selection-name'>
+        Shape
+        <span className='room-planner-row-size'>{ `${shape.width}″ × ${shape.depth}″` }</span>
+      </div>
+      <InchesInput
+        id='shape-width'
+        isPositive
+        label='Width'
+        onChange={handleShapeField(
+          shape,
+          'width'
+        )}
+        value={shape.width}
+      />
+      <InchesInput
+        id='shape-depth'
+        isPositive
+        label='Depth'
+        onChange={handleShapeField(
+          shape,
+          'depth'
+        )}
+        value={shape.depth}
+      />
+      <InchesInput
+        id='shape-x'
+        label='From left'
+        onChange={handleShapeField(
+          shape,
+          'x'
+        )}
+        value={shape.x}
+      />
+      <InchesInput
+        id='shape-y'
+        label='From top'
+        onChange={handleShapeField(
+          shape,
+          'y'
+        )}
+        value={shape.y}
+      />
+      <div className='room-planner-selection-actions'>
+        <button
+          className='room-planner-row-action'
+          onClick={() => { handleShapeRemove(shape.id) }}
+          type='button'
+        >
+          Remove shape
+        </button>
+      </div>
+    </div>
+
   const renderSelection = (): ReactElement => {
     if (selectedDoor) return renderDoorSelection(selectedDoor)
+    if (selectedShape) return renderShapeSelection(selectedShape)
 
     const item = selectedPlacement && furnitureMap[selectedPlacement.furnitureId]
 
@@ -826,6 +961,8 @@ export const RoomPlannerContent: FunctionComponent<RoomPlannerContentPropsType> 
           Tap furniture to select it, then drag it to move it, or press and hold to pick it up and drag straight away.
           Arrow keys nudge the selected piece an inch, or a foot with shift held, R rotates it and D duplicates it.
           Doors and entryways work the same way and slide along the walls; select one to change its width or which way a door opens.
+          Drag on empty floor to draw a shape that measures out a space, such as a rug; drag its handles to resize it.
+          Edges snap to walls, furniture and shapes; hold alt while dragging to stop them.
         </p>
       )
     }
@@ -984,9 +1121,14 @@ export const RoomPlannerContent: FunctionComponent<RoomPlannerContentPropsType> 
           onRemove={handleRemove}
           onRotate={handleRotate}
           onSelect={selectPlacement}
+          onShapeChange={updateShape}
+          onShapeCreate={handleShapeCreate}
+          onShapeRemove={handleShapeRemove}
+          onShapeSelect={selectShape}
           room={selectedRoom}
           selectedDoorId={selectedDoorId}
           selectedPlacementId={selectedPlacementId}
+          selectedShapeId={selectedShapeId}
         />
       </>
     )

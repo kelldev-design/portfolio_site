@@ -30,7 +30,8 @@ export const DEFAULT_ROOM_PLANNER: RoomPlannerStateType = {
         { depth: 66, width: 118, x: 91, y: 0 },
         { depth: 116, width: 104, x: 105, y: 66 },
         { depth: 116, width: 48, x: 209, y: 66 }
-      ]
+      ],
+      shapes: []
     },
     {
       doors: [
@@ -45,7 +46,8 @@ export const DEFAULT_ROOM_PLANNER: RoomPlannerStateType = {
       rects: [
         { depth: 132, width: 126, x: 0, y: 0 },
         { depth: 86, width: 16, x: 126, y: 46 }
-      ]
+      ],
+      shapes: []
     },
     {
       doors: [
@@ -56,7 +58,8 @@ export const DEFAULT_ROOM_PLANNER: RoomPlannerStateType = {
       placements: [],
       rects: [
         { depth: 130, width: 140, x: 0, y: 0 }
-      ]
+      ],
+      shapes: []
     },
     {
       doors: [
@@ -71,7 +74,8 @@ export const DEFAULT_ROOM_PLANNER: RoomPlannerStateType = {
       ],
       rects: [
         { depth: 122, width: 141, x: 0, y: 0 }
-      ]
+      ],
+      shapes: []
     },
     {
       doors: [
@@ -85,7 +89,8 @@ export const DEFAULT_ROOM_PLANNER: RoomPlannerStateType = {
       ],
       rects: [
         { depth: 125, width: 122, x: 0, y: 0 }
-      ]
+      ],
+      shapes: []
     }
   ],
   selectedRoomId: '518ceaf6-7a06-4d67-9b3c-b811d3fa6271'

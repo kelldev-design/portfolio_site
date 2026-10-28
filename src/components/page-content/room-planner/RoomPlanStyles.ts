@@ -1,4 +1,5 @@
 import { css } from 'styled-components'
+import { SelectionOverlayStyles } from './SelectionOverlayStyles'
 import {
   CHART_GRID,
   GREY1,
@@ -15,7 +16,11 @@ export const RoomPlanStyles = css`
   min-height: 0px;
   width: 100%;
 
+  ${SelectionOverlayStyles}
+
   .room-plan {
+    /* Drag on empty floor to draw a shape. */
+    cursor: crosshair;
     display: block;
     height: 100%;
     /* Stops touch drags from scrolling the page instead of moving furniture. */
@@ -156,6 +161,48 @@ export const RoomPlanStyles = css`
     &.is-remove:focus-visible circle {
       fill: ${STATUS_BAD};
     }
+  }
+
+  /* A measured out space, under the furniture: tinted, with a dashed edge. */
+  .room-plan-shape {
+    cursor: move;
+    outline: none;
+
+    rect {
+      fill: ${LINK1};
+      fill-opacity: 0.08;
+      stroke: ${LINK1};
+      stroke-dasharray: 6 4;
+      stroke-width: 1.5px;
+      vector-effect: non-scaling-stroke;
+    }
+
+    text {
+      dominant-baseline: middle;
+      fill: ${LINK1};
+      pointer-events: none;
+      text-anchor: middle;
+    }
+
+    &.is-selected rect,
+    &:focus-visible rect {
+      fill-opacity: 0.16;
+      stroke-dasharray: none;
+      stroke-width: 2.5px;
+    }
+
+    &.is-lifted rect {
+      fill-opacity: 0.25;
+    }
+  }
+
+  .room-plan-draft {
+    fill: ${LINK1};
+    fill-opacity: 0.12;
+    pointer-events: none;
+    stroke: ${LINK1};
+    stroke-width: 1.5px;
+    vector-effect: non-scaling-stroke;
   }
 
   .room-plan-piece {

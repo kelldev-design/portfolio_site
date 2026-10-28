@@ -11,9 +11,14 @@ import { createPortal } from 'react-dom'
 import styled from 'styled-components'
 import { InchesInput } from './InchesInput'
 import {
+  type HandleType,
+  resizeRect
+} from './resizing'
+import {
   clamp,
   formatInches
 } from './roomPlannerStorage'
+import { SelectionOverlay } from './SelectionOverlay'
 import {
   ShapeEditorDetailsStyles,
   ShapeEditorStyles
@@ -25,6 +30,14 @@ import {
   type SizeType,
   toSvgPoint
 } from './shapeGeometry'
+import {
+  NO_GUIDES,
+  rectEdges,
+  SNAP_PIXELS,
+  type SnapGuidesType,
+  snapPoint,
+  snapRects
+} from './snapping'
 import { type RectType } from '../../../types/roomPlannerTypes'
 import { InputCustom } from '../../common/input-custom/InputCustom'
 import { SelectCustom } from '../../common/select-custom/SelectCustom'
@@ -70,6 +83,7 @@ const snapTo = (
 type DragType =
   | { mode: 'draw', startX: number, startY: number, canvas: SizeType, clickedIndex: number }
   | { mode: 'move', index: number, offsetX: number, offsetY: number, canvas: SizeType }
+  | { mode: 'resize', index: number, handle: HandleType, start: RectType, canvas: SizeType }
 
 interface ShapeEditorPropsType {
   color: string
@@ -123,6 +137,8 @@ export const ShapeEditor: FunctionComponent<ShapeEditorPropsType> = ({
   const [ draft, setDraft ] = useState<RectType | null>(null)
   const [ dragCanvas, setDragCanvas ] = useState<SizeType | null>(null)
   const [ error, setError ] = useState('')
+  // The edges a drag has snapped to, shown as guide lines while it lasts.
+  const [ guides, setGuides ] = useState<SnapGuidesType>(NO_GUIDES)
 
   const size = shapeSize(rects)
   const selectedRect = rects[selectedIndex] as RectType | undefined
@@ -144,22 +160,55 @@ export const ShapeEditor: FunctionComponent<ShapeEditorPropsType> = ({
     svgSize
   )
 
-  const snappedPoint = (event: PointerEvent): { x: number, y: number } => {
+  // Inches per screen pixel, to keep handles and snapping one size on screen at any zoom.
+  const unit = svgSize.width && svgSize.height
+    ? Math.max(
+      canvas.width / svgSize.width,
+      canvas.depth / svgSize.height
+    )
+    : 1
+  // The view starts this far above and left of the canvas, so the handles of a rectangle in
+  // its top left corner show whole. The view stays the canvas's size, so the grid still
+  // reaches every edge of it.
+  const pad = 6 * unit
+
+  /* Edges of every rectangle but the one being changed, and the canvas's own. */
+  const snapTargets = (excludeIndex: number): { xs: number[], ys: number[] } => {
+    const edges = rectEdges(rects.filter((_rect, index) => index !== excludeIndex))
+
+    return { xs: [ 0, ...edges.xs ], ys: [ 0, ...edges.ys ] }
+  }
+
+  /* The pointer on the canvas, on another rectangle's edge when it is near one, or else on
+     the snap grid. Alt held skips the edges. */
+  const snappedPoint = (
+    event: PointerEvent,
+    excludeIndex = -1
+  ): { x: number, y: number } => {
     const point = toSvgPoint(
       svgRef.current,
       event
     )
+    const edge = event.altKey
+      ? { guides: NO_GUIDES, point }
+      : snapPoint(
+        point,
+        snapTargets(excludeIndex),
+        SNAP_PIXELS * unit
+      )
+
+    setGuides(edge.guides)
 
     return {
       x: clamp(
-        snapTo(
+        edge.guides.x ?? snapTo(
           point.x,
           snap
         ),
         canvas.width
       ),
       y: clamp(
-        snapTo(
+        edge.guides.y ?? snapTo(
           point.y,
           snap
         ),
@@ -243,10 +292,38 @@ export const ShapeEditor: FunctionComponent<ShapeEditorPropsType> = ({
     )
   }
 
+  const handleResizeStart = (
+    event: PointerEvent,
+    handle: HandleType
+  ): void => {
+    if (!selectedRect) return
+
+    startDrag(
+      event,
+      { canvas, handle, index: selectedIndex, mode: 'resize', start: selectedRect }
+    )
+  }
+
   const handlePointerMove = (event: PointerEvent<SVGSVGElement>): void => {
     const drag = dragRef.current
 
     if (!drag) return
+
+    if (drag.mode === 'resize') {
+      updateRect(
+        drag.index,
+        resizeRect(
+          drag.start,
+          drag.handle,
+          snappedPoint(
+            event,
+            drag.index
+          )
+        )
+      )
+
+      return
+    }
 
     if (drag.mode === 'draw') {
       const point = snappedPoint(event)
@@ -274,22 +351,37 @@ export const ShapeEditor: FunctionComponent<ShapeEditorPropsType> = ({
       event
     )
     const rect = rects[drag.index]
+    const x = point.x - drag.offsetX
+    const y = point.y - drag.offsetY
+    // An edge near another rectangle's meets it exactly; otherwise the move keeps to the grid.
+    const edge = event.altKey
+      ? { dx: 0, dy: 0, guides: NO_GUIDES }
+      : snapRects(
+        [{ ...rect, x, y }],
+        snapTargets(drag.index),
+        SNAP_PIXELS * unit
+      )
 
+    setGuides(edge.guides)
     updateRect(
       drag.index,
       {
         x: clamp(
-          snapTo(
-            point.x - drag.offsetX,
-            snap
-          ),
+          edge.guides.x === null
+            ? snapTo(
+              x,
+              snap
+            )
+            : x + edge.dx,
           drag.canvas.width - rect.width
         ),
         y: clamp(
-          snapTo(
-            point.y - drag.offsetY,
-            snap
-          ),
+          edge.guides.y === null
+            ? snapTo(
+              y,
+              snap
+            )
+            : y + edge.dy,
           drag.canvas.depth - rect.depth
         )
       }
@@ -309,6 +401,7 @@ export const ShapeEditor: FunctionComponent<ShapeEditorPropsType> = ({
 
     dragRef.current = null
     dragGate.end()
+    setGuides(NO_GUIDES)
     updateDraft(null)
     setDragCanvas(null)
 
@@ -367,16 +460,11 @@ export const ShapeEditor: FunctionComponent<ShapeEditorPropsType> = ({
   /* An × in the selected rectangle's corner that removes it, kept the same size on screen
      however far the canvas is zoomed. */
   const renderDeleteHandle = (rect: RectType): ReactElement => {
-    const inchesPerPixel = svgSize.width && svgSize.height
-      ? Math.max(
-        canvas.width / svgSize.width,
-        canvas.depth / svgSize.height
-      )
-      : 1
-    const radius = 9 * inchesPerPixel
+    const radius = 9 * unit
     const arm = radius * 0.4
-    const cx = rect.x + rect.width - radius * 1.4
-    const cy = rect.y + radius * 1.4
+    // Set in from the corner, clear of the corner's resize handle.
+    const cx = rect.x + rect.width - radius * 2.2
+    const cy = rect.y + radius * 2.2
 
     return (
       <g
@@ -430,7 +518,7 @@ export const ShapeEditor: FunctionComponent<ShapeEditorPropsType> = ({
           key={`x${x}`}
           x1={x}
           x2={x}
-          y1={0}
+          y1={-pad}
           y2={canvas.depth}
         />
       )
@@ -441,7 +529,7 @@ export const ShapeEditor: FunctionComponent<ShapeEditorPropsType> = ({
         <line
           className={y % 12 ? 'shape-editor-grid-minor' : 'shape-editor-grid'}
           key={`y${y}`}
-          x1={0}
+          x1={-pad}
           x2={canvas.width}
           y1={y}
           y2={y}
@@ -478,8 +566,9 @@ export const ShapeEditor: FunctionComponent<ShapeEditorPropsType> = ({
         <p className='room-planner-hint'>
           Drag on empty grid to draw a rectangle, or add one and type its size. Rectangles that
           overlap or touch merge into one shape. Tap a rectangle to select it, then drag it to move
-          it, or press and hold to pick it up and drag straight away. Press × or Delete to remove
-          it. Hold shift to draw starting inside a rectangle.
+          it, or press and hold to pick it up and drag straight away. Drag its handles to resize it,
+          and press × or Delete to remove it. Edges snap to other rectangles; hold alt to stop
+          them. Hold shift to draw starting inside a rectangle.
         </p>
       )
     }
@@ -602,14 +691,14 @@ export const ShapeEditor: FunctionComponent<ShapeEditorPropsType> = ({
           onPointerUp={handlePointerUp}
           ref={svgRef}
           tabIndex={0}
-          viewBox={`0 0 ${canvas.width} ${canvas.depth}`}
+          viewBox={`${-pad} ${-pad} ${canvas.width} ${canvas.depth}`}
         >
           <rect
             className='shape-editor-background'
             height={canvas.depth}
             width={canvas.width}
-            x={0}
-            y={0}
+            x={-pad}
+            y={-pad}
           />
           { renderGrid() }
           { rects.map(renderRect) }
@@ -627,15 +716,51 @@ export const ShapeEditor: FunctionComponent<ShapeEditorPropsType> = ({
                 y={selectedRect.y}
               />
           }
+          {
+            selectedRect && !draft &&
+              <SelectionOverlay
+                bounds={{ left: 0, top: 0 }}
+                onHandlePointerDown={handleResizeStart}
+                rect={selectedRect}
+                unit={unit}
+              />
+          }
           { selectedRect && !draft && renderDeleteHandle(selectedRect) }
           {
             draft &&
-              <rect
-                className='shape-editor-selection'
-                height={draft.depth}
-                width={draft.width}
-                x={draft.x}
-                y={draft.y}
+              <>
+                <rect
+                  className='shape-editor-selection'
+                  height={draft.depth}
+                  width={draft.width}
+                  x={draft.x}
+                  y={draft.y}
+                />
+                <SelectionOverlay
+                  bounds={{ left: 0, top: 0 }}
+                  rect={draft}
+                  unit={unit}
+                />
+              </>
+          }
+          {
+            guides.x !== null &&
+              <line
+                className='snap-guide'
+                x1={guides.x}
+                x2={guides.x}
+                y1={-pad}
+                y2={canvas.depth}
+              />
+          }
+          {
+            guides.y !== null &&
+              <line
+                className='snap-guide'
+                x1={-pad}
+                x2={canvas.width}
+                y1={guides.y}
+                y2={guides.y}
               />
           }
         </svg>

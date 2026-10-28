@@ -46,12 +46,19 @@ export interface DoorType {
   swing: 'in' | 'out'
 }
 
+/* A rectangle drawn on a room's floor to measure out a space, such as a rug or a walkway.
+   x and y are its top left corner, measured from the room's top left corner. */
+export interface RoomShapeType extends RectType {
+  id: string
+}
+
 export interface RoomType {
   id: string
   name: string
   rects: RectType[]
   placements: PlacementType[]
   doors: DoorType[]
+  shapes: RoomShapeType[]
 }
 
 export interface RoomPlannerStateType {

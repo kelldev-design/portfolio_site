@@ -1,4 +1,5 @@
 import { css } from 'styled-components'
+import { SelectionOverlayStyles } from './SelectionOverlayStyles'
 import {
   CHART_GRID,
   GREY1,
@@ -22,6 +23,8 @@ export const ShapeEditorStyles = css`
     flex: 1;
     min-height: 0px;
   }
+
+  ${SelectionOverlayStyles}
 
   .shape-editor-toolbar {
     align-items: flex-end;

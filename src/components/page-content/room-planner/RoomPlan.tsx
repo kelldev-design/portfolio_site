@@ -3,11 +3,17 @@ import {
   type KeyboardEvent,
   type PointerEvent,
   type ReactElement,
-  useRef
+  useRef,
+  useState
 } from 'react'
 import styled from 'styled-components'
+import {
+  type HandleType,
+  resizeRect
+} from './resizing'
 import { clamp } from './roomPlannerStorage'
 import { RoomPlanStyles } from './RoomPlanStyles'
+import { SelectionOverlay } from './SelectionOverlay'
 import {
   doorGeometry,
   doorWall,
@@ -23,9 +29,20 @@ import {
   type WallType
 } from './shapeGeometry'
 import {
+  NO_GUIDES,
+  rectEdges,
+  SNAP_PIXELS,
+  type SnapGuidesType,
+  type SnapTargetsType,
+  snapPoint,
+  snapRects
+} from './snapping'
+import {
   type DoorType,
   type FurnitureType,
   type PlacementType,
+  type RectType,
+  type RoomShapeType,
   type RoomType
 } from '../../../types/roomPlannerTypes'
 import { useDragGate } from '../../hooks/useDragGate'
@@ -47,10 +64,28 @@ const MIN_INCH_PIXELS = 5
 const NUDGE = 1
 const NUDGE_LARGE = 12
 
-/* A piece of furniture follows the pointer; a door slides to the wall nearest it. */
+/* A piece of furniture or a shape follows the pointer; a door slides to the wall nearest
+   it; a shape's handle resizes it; and a drag on empty floor draws a new shape. */
 type DragType =
   | { kind: 'placement', id: string, offsetX: number, offsetY: number }
   | { kind: 'door', id: string }
+  | { kind: 'shape', id: string, offsetX: number, offsetY: number }
+  | { kind: 'resize', id: string, handle: HandleType, start: RectType }
+  | { kind: 'draw', startX: number, startY: number }
+
+/* A round button beside a selection: its icon is drawn about cx, cy with arms of arm. */
+interface ActionType {
+  className: string
+  icon: (cx: number, cy: number, arm: number) => string
+  label: string
+  onActivate: () => void
+}
+
+/* Excluded from a drag's snap targets: the thing being dragged. */
+interface SnapExcludeType {
+  placementId?: string
+  shapeId?: string
+}
 
 interface RoomPlanPropsType {
   furnitureMap: Record<string, FurnitureType>
@@ -61,11 +96,16 @@ interface RoomPlanPropsType {
   onMove: (placementId: string, x: number, y: number) => void
   onRemove: (placementId: string) => void
   onRotate: (placementId: string) => void
-  /** Selects a piece, or with '' clears any selection, piece or door. */
+  /** Selects a piece, or with '' clears any selection, piece, door or shape. */
   onSelect: (placementId: string) => void
+  onShapeChange: (shapeId: string, changes: Partial<RectType>) => void
+  onShapeCreate: (rect: RectType) => void
+  onShapeRemove: (shapeId: string) => void
+  onShapeSelect: (shapeId: string) => void
   room: RoomType
   selectedDoorId: string
   selectedPlacementId: string
+  selectedShapeId: string
 }
 
 export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
@@ -78,9 +118,14 @@ export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
   onRemove,
   onRotate,
   onSelect,
+  onShapeChange,
+  onShapeCreate,
+  onShapeRemove,
+  onShapeSelect,
   room,
   selectedDoorId,
-  selectedPlacementId
+  selectedPlacementId,
+  selectedShapeId
 }) => {
   const svgRef = useRef<SVGSVGElement>(null)
   const svgSize = useElementSize(svgRef)
@@ -90,6 +135,12 @@ export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
   const roomSize = shapeSize(room.rects)
   const floorClipId = `room-floor-${room.id}`
   const selectedPlacement = room.placements.find(({ id }) => id === selectedPlacementId)
+  const selectedShape = room.shapes.find(({ id }) => id === selectedShapeId)
+  // The shape being drawn, read from a ref by pointer handlers; see ShapeEditor.
+  const draftRef = useRef<RectType | null>(null)
+  const [ draft, setDraft ] = useState<RectType | null>(null)
+  // The edges a drag has snapped to, shown as guide lines while it lasts.
+  const [ guides, setGuides ] = useState<SnapGuidesType>(NO_GUIDES)
 
   // Room for the dimension labels around the plan.
   const padding = Math.max(
@@ -123,13 +174,102 @@ export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
     roomSize.width,
     roomSize.depth
   ) / 40
+  // Inches per screen pixel, to keep buttons, handles and snapping one size on screen.
+  const unit = svgSize.width && svgSize.height
+    ? Math.max(
+      (view.right - view.left) / svgSize.width,
+      (view.bottom - view.top) / svgSize.height
+    )
+    : 0
+
+  /* The walls, and the edges of every piece and shape but the one being dragged. */
+  const snapTargets = ({ placementId, shapeId }: SnapExcludeType): SnapTargetsType => {
+    const walls = wallSegments(room.rects)
+    const others = rectEdges([
+      ...room.placements.flatMap(placement => {
+        const furniture = furnitureMap[placement.furnitureId]
+
+        return placement.id === placementId || !furniture
+          ? []
+          : placedRects(
+            furniture,
+            placement
+          )
+      }),
+      ...room.shapes.filter(({ id }) => id !== shapeId)
+    ])
+
+    return {
+      xs: [ ...walls.filter(({ orientation }) => orientation === 'vertical').map(({ x }) => x), ...others.xs ],
+      ys: [ ...walls.filter(({ orientation }) => orientation === 'horizontal').map(({ y }) => y), ...others.ys ]
+    }
+  }
+
+  /* Shifts rectangles about to be placed so an edge near a wall or another edge meets it,
+     unless alt is held. */
+  const snapMove = (
+    event: { altKey: boolean },
+    rects: RectType[],
+    exclude: SnapExcludeType
+  ): { dx: number, dy: number, guides: SnapGuidesType } => {
+    const snapped = event.altKey || !unit
+      ? { dx: 0, dy: 0, guides: NO_GUIDES }
+      : snapRects(
+        rects,
+        snapTargets(exclude),
+        SNAP_PIXELS * unit
+      )
+
+    setGuides(snapped.guides)
+
+    return snapped
+  }
+
+  /* The pointer in the room, on a wall or edge when near one and otherwise on a whole inch,
+     kept inside the room's bounding box. */
+  const snappedPointer = (
+    event: PointerEvent,
+    exclude: SnapExcludeType
+  ): { x: number, y: number } => {
+    const point = toSvgPoint(
+      svgRef.current,
+      event
+    )
+    const snapped = event.altKey || !unit
+      ? { guides: NO_GUIDES, point }
+      : snapPoint(
+        point,
+        snapTargets(exclude),
+        SNAP_PIXELS * unit
+      )
+
+    setGuides(snapped.guides)
+
+    return {
+      x: clamp(
+        snapped.guides.x === null ? Math.round(point.x) : snapped.point.x,
+        roomSize.width
+      ),
+      y: clamp(
+        snapped.guides.y === null ? Math.round(point.y) : snapped.point.y,
+        roomSize.depth
+      )
+    }
+  }
+
+  const updateDraft = (next: RectType | null): void => {
+    draftRef.current = next
+    setDraft(next)
+  }
 
   /* Moves a placement, kept whole inches and inside the room's bounding box. A piece can
      still overhang a notch in an irregular room; it is flagged rather than blocked. */
   const moveWithinRoom = (
     placement: PlacementType,
     x: number,
-    y: number
+    y: number,
+    // Given for pointer drags, which snap to walls and other pieces.
+    event?: PointerEvent
   ): void => {
     const furniture = furnitureMap[placement.furnitureId]
 
@@ -139,18 +279,119 @@ export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
       furniture,
       placement.rotation
     )
+    const snapped = event
+      ? snapMove(
+        event,
+        placedRects(
+          furniture,
+          { ...placement, x, y }
+        ),
+        { placementId: placement.id }
+      )
+      : { dx: 0, dy: 0, guides: NO_GUIDES }
 
     onMove(
       placement.id,
       clamp(
-        Math.round(x),
+        snapped.guides.x === null ? Math.round(x) : x + snapped.dx,
         roomSize.width - size.width
       ),
       clamp(
-        Math.round(y),
+        snapped.guides.y === null ? Math.round(y) : y + snapped.dy,
         roomSize.depth - size.depth
       )
     )
+  }
+
+  /* As moveWithinRoom, for a shape. */
+  const moveShape = (
+    shape: RoomShapeType,
+    x: number,
+    y: number,
+    event?: PointerEvent
+  ): void => {
+    const snapped = event
+      ? snapMove(
+        event,
+        [{ ...shape, x, y }],
+        { shapeId: shape.id }
+      )
+      : { dx: 0, dy: 0, guides: NO_GUIDES }
+
+    onShapeChange(
+      shape.id,
+      {
+        x: clamp(
+          snapped.guides.x === null ? Math.round(x) : x + snapped.dx,
+          roomSize.width - shape.width
+        ),
+        y: clamp(
+          snapped.guides.y === null ? Math.round(y) : y + snapped.dy,
+          roomSize.depth - shape.depth
+        )
+      }
+    )
+  }
+
+  const handleShapePointerDown = (
+    event: PointerEvent<SVGGElement>,
+    shape: RoomShapeType
+  ): void => {
+    event.stopPropagation()
+    dragGate.begin(
+      event,
+      shape.id,
+      shape.id === selectedShapeId
+    )
+    onShapeSelect(shape.id)
+
+    const point = toSvgPoint(
+      svgRef.current,
+      event
+    )
+
+    dragRef.current = {
+      id: shape.id,
+      kind: 'shape',
+      offsetX: point.x - shape.x,
+      offsetY: point.y - shape.y
+    }
+    svgRef.current?.setPointerCapture(event.pointerId)
+  }
+
+  const handleResizeStart = (
+    event: PointerEvent,
+    handle: HandleType
+  ): void => {
+    if (!selectedShape) return
+
+    // Handles show only on the selected shape, so a resize needs no hold first.
+    dragGate.begin(
+      event,
+      selectedShape.id,
+      true
+    )
+    dragRef.current = { handle, id: selectedShape.id, kind: 'resize', start: selectedShape }
+    svgRef.current?.setPointerCapture(event.pointerId)
+  }
+
+  /* A press on empty floor clears the selection, and dragging from it draws a shape. */
+  const handleFloorPointerDown = (event: PointerEvent<SVGSVGElement>): void => {
+    onSelect('')
+
+    const point = snappedPointer(
+      event,
+      {}
+    )
+
+    setGuides(NO_GUIDES)
+    dragGate.begin(
+      event,
+      'draw',
+      true
+    )
+    dragRef.current = { kind: 'draw', startX: point.x, startY: point.y }
+    svgRef.current?.setPointerCapture(event.pointerId)
   }
 
   const handlePointerDown = (
@@ -199,10 +440,63 @@ export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
 
     if (!drag || !dragGate.allowsMove(event)) return
 
+    if (drag.kind === 'draw') {
+      const corner = snappedPointer(
+        event,
+        {}
+      )
+
+      updateDraft({
+        depth: Math.abs(corner.y - drag.startY),
+        width: Math.abs(corner.x - drag.startX),
+        x: Math.min(
+          corner.x,
+          drag.startX
+        ),
+        y: Math.min(
+          corner.y,
+          drag.startY
+        )
+      })
+
+      return
+    }
+
+    if (drag.kind === 'resize') {
+      onShapeChange(
+        drag.id,
+        resizeRect(
+          drag.start,
+          drag.handle,
+          snappedPointer(
+            event,
+            { shapeId: drag.id }
+          )
+        )
+      )
+
+      return
+    }
+
     const point = toSvgPoint(
       svgRef.current,
       event
     )
+
+    if (drag.kind === 'shape') {
+      const shape = room.shapes.find(({ id }) => id === drag.id)
+
+      if (shape) {
+        moveShape(
+          shape,
+          point.x - drag.offsetX,
+          point.y - drag.offsetY,
+          event
+        )
+      }
+
+      return
+    }
 
     if (drag.kind === 'door') {
       const door = room.doors.find(({ id }) => id === drag.id)
@@ -229,13 +523,21 @@ export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
     moveWithinRoom(
       placement,
       point.x - drag.offsetX,
-      point.y - drag.offsetY
+      point.y - drag.offsetY,
+      event
     )
   }
 
   const handlePointerUp = (event: PointerEvent<SVGSVGElement>): void => {
+    const drawn = draftRef.current
+
+    // A shape needs some size in both directions; a tap draws nothing.
+    if (drawn && drawn.width >= 1 && drawn.depth >= 1) onShapeCreate(drawn)
+
     dragRef.current = null
     dragGate.end()
+    updateDraft(null)
+    setGuides(NO_GUIDES)
 
     if (svgRef.current?.hasPointerCapture(event.pointerId)) {
       svgRef.current.releasePointerCapture(event.pointerId)
@@ -271,6 +573,32 @@ export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
     } else if (event.key === 'Delete' || event.key === 'Backspace') {
       event.preventDefault()
       onRemove(placement.id)
+    }
+  }
+
+  const handleShapeKeyDown = (
+    event: KeyboardEvent<SVGGElement>,
+    shape: RoomShapeType
+  ): void => {
+    const step = event.shiftKey ? NUDGE_LARGE : NUDGE
+    const moves: Record<string, [number, number]> = {
+      ArrowDown: [ 0, step ],
+      ArrowLeft: [ -step, 0 ],
+      ArrowRight: [ step, 0 ],
+      ArrowUp: [ 0, -step ]
+    }
+    const move = moves[event.key]
+
+    if (move) {
+      event.preventDefault()
+      moveShape(
+        shape,
+        shape.x + move[0],
+        shape.y + move[1]
+      )
+    } else if (event.key === 'Delete' || event.key === 'Backspace') {
+      event.preventDefault()
+      onShapeRemove(shape.id)
     }
   }
 
@@ -463,82 +791,180 @@ export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
     )
   }
 
-  /* Duplicate, rotate and remove buttons by the selected piece's top right corner, above it or below it
-     when there is no room above, kept the same size on screen however large the plan is. */
-  const renderPlacementHandles = (placement: PlacementType): ReactElement | null => {
-    const furniture = furnitureMap[placement.furnitureId]
+  /* Round buttons by a selection's top right corner, above it or below it when there is no
+     room above, kept the same size on screen however large the plan is. */
+  const renderActions = (
+    box: RectType,
+    actions: ActionType[]
+  ): ReactElement | null => {
+    if (!unit) return null
 
-    if (!furniture || !svgSize.width || !svgSize.height) return null
-
-    const size = placedSize(
-      furniture,
-      placement.rotation
-    )
-    const inchesPerPixel = Math.max(
-      (view.right - view.left) / svgSize.width,
-      (view.bottom - view.top) / svgSize.height
-    )
-    const radius = 12 * inchesPerPixel
-    const gap = 6 * inchesPerPixel
-    const above = placement.y - gap - radius
-    const cy = above - radius < view.top ? placement.y + size.depth + gap + radius : above
+    const radius = 12 * unit
+    const gap = 6 * unit
+    const above = box.y - gap - radius
+    const cy = above - radius < view.top ? box.y + box.depth + gap + radius : above
     const arm = radius * 0.4
-    const right = placement.x + size.width - radius
+    const right = box.x + box.width - radius
     const step = radius * 2 + gap
-    const handles = [
-      {
-        className: 'is-duplicate',
-        cx: right - step * 2,
-        // Two overlapping squares.
-        icon: (cx: number): string => `M${cx - arm * 0.4} ${cy - arm * 1.1}h${arm * 1.5}v${arm * 1.5}M${cx - arm * 1.1} ${cy - arm * 0.4}h${arm * 1.5}v${arm * 1.5}h${-arm * 1.5}Z`,
-        label: `Duplicate ${furniture.name}`,
-        onActivate: () => { onDuplicate(placement.id) }
-      },
-      {
-        className: 'is-rotate',
-        cx: right - step,
-        // A three quarter circle clockwise from the top, with an arrowhead at its end.
-        icon: (cx: number): string => `M${cx} ${cy - arm}A${arm} ${arm} 0 1 1 ${cx - arm} ${cy}M${cx - arm * 1.5} ${cy - arm * 0.5}L${cx - arm} ${cy}L${cx - arm * 0.5} ${cy - arm * 0.5}`,
-        label: `Rotate ${furniture.name}`,
-        onActivate: () => { onRotate(placement.id) }
-      },
-      {
-        className: 'is-remove',
-        cx: right,
-        icon: (cx: number): string => `M${cx - arm} ${cy - arm}L${cx + arm} ${cy + arm}M${cx + arm} ${cy - arm}L${cx - arm} ${cy + arm}`,
-        label: `Remove ${furniture.name} from the room`,
-        onActivate: () => { onRemove(placement.id) }
-      }
-    ]
 
     return (
       <g className='room-plan-handles'>
-        { handles.map(({ className, cx, icon, label, onActivate }) =>
-          <g
-            aria-label={label}
-            className={`room-plan-handle ${className}`}
-            key={className}
-            onClick={onActivate}
-            onKeyDown={event => {
-              if (event.key !== 'Enter' && event.key !== ' ') return
+        { actions.map(({ className, icon, label, onActivate }, index) => {
+          const cx = right - step * (actions.length - 1 - index)
 
-              event.preventDefault()
-              onActivate()
-            }}
-            // Keeps the press from reaching the plan, which would clear the selection.
-            onPointerDown={event => { event.stopPropagation() }}
-            role='button'
-            tabIndex={0}
-          >
-            <title>{ label }</title>
-            <circle
-              cx={cx}
-              cy={cy}
-              r={radius}
-            />
-            <path d={icon(cx)} />
-          </g>) }
+          return (
+            <g
+              aria-label={label}
+              className={`room-plan-handle ${className}`}
+              key={className}
+              onClick={onActivate}
+              onKeyDown={event => {
+                if (event.key !== 'Enter' && event.key !== ' ') return
+
+                event.preventDefault()
+                onActivate()
+              }}
+              // Keeps the press from reaching the plan, which would clear the selection.
+              onPointerDown={event => { event.stopPropagation() }}
+              role='button'
+              tabIndex={0}
+            >
+              <title>{ label }</title>
+              <circle
+                cx={cx}
+                cy={cy}
+                r={radius}
+              />
+              <path
+                d={icon(
+                  cx,
+                  cy,
+                  arm
+                )}
+              />
+            </g>
+          )
+        }) }
       </g>
+    )
+  }
+
+  const removeIcon = (cx: number, cy: number, arm: number): string => `M${cx - arm} ${cy - arm}L${cx + arm} ${cy + arm}M${cx + arm} ${cy - arm}L${cx - arm} ${cy + arm}`
+
+  /* Duplicate, rotate and remove buttons for the selected piece. */
+  const renderPlacementHandles = (placement: PlacementType): ReactElement | null => {
+    const furniture = furnitureMap[placement.furnitureId]
+
+    if (!furniture) return null
+
+    return renderActions(
+      {
+        ...placedSize(
+          furniture,
+          placement.rotation
+        ),
+        x: placement.x,
+        y: placement.y
+      },
+      [
+        {
+          className: 'is-duplicate',
+          // Two overlapping squares.
+          icon: (cx, cy, arm) => `M${cx - arm * 0.4} ${cy - arm * 1.1}h${arm * 1.5}v${arm * 1.5}M${cx - arm * 1.1} ${cy - arm * 0.4}h${arm * 1.5}v${arm * 1.5}h${-arm * 1.5}Z`,
+          label: `Duplicate ${furniture.name}`,
+          onActivate: () => { onDuplicate(placement.id) }
+        },
+        {
+          className: 'is-rotate',
+          // A three quarter circle clockwise from the top, with an arrowhead at its end.
+          icon: (cx, cy, arm) => `M${cx} ${cy - arm}A${arm} ${arm} 0 1 1 ${cx - arm} ${cy}M${cx - arm * 1.5} ${cy - arm * 0.5}L${cx - arm} ${cy}L${cx - arm * 0.5} ${cy - arm * 0.5}`,
+          label: `Rotate ${furniture.name}`,
+          onActivate: () => { onRotate(placement.id) }
+        },
+        {
+          className: 'is-remove',
+          icon: removeIcon,
+          label: `Remove ${furniture.name} from the room`,
+          onActivate: () => { onRemove(placement.id) }
+        }
+      ]
+    )
+  }
+
+  /* A drawn shape, labelled with its size. */
+  const renderShape = (shape: RoomShapeType): ReactElement => {
+    const label = `${Math.round(shape.width * 10) / 10}″ × ${Math.round(shape.depth * 10) / 10}″`
+    const fontSize = Math.min(
+      labelSize,
+      shape.depth / 2.5,
+      shape.width / Math.max(
+        label.length * 0.6,
+        1
+      )
+    )
+
+    return (
+      <g
+        aria-label={`Shape, ${shape.width} by ${shape.depth} inches, at ${shape.x}, ${shape.y}`}
+        className={`room-plan-shape ${shape.id === selectedShapeId ? 'is-selected' : ''} ${shape.id === dragGate.liftedKey ? 'is-lifted' : ''}`}
+        key={shape.id}
+        onKeyDown={event => {
+          handleShapeKeyDown(
+            event,
+            shape
+          )
+        }}
+        onPointerDown={event => {
+          handleShapePointerDown(
+            event,
+            shape
+          )
+        }}
+        role='button'
+        tabIndex={0}
+      >
+        <rect
+          height={shape.depth}
+          width={shape.width}
+          x={shape.x}
+          y={shape.y}
+        />
+        <text
+          fontSize={fontSize}
+          x={shape.x + shape.width / 2}
+          y={shape.y + shape.depth / 2}
+        >
+          { label }
+        </text>
+      </g>
+    )
+  }
+
+  /* Handles, side lengths and a remove button for the selected shape. */
+  const renderShapeSelection = (shape: RoomShapeType): ReactElement | null => {
+    if (!unit) return null
+
+    return (
+      <>
+        <SelectionOverlay
+          bounds={{ left: view.left, top: view.top }}
+          onHandlePointerDown={handleResizeStart}
+          rect={shape}
+          unit={unit}
+          widthEdge='bottom'
+        />
+        { renderActions(
+          shape,
+          [
+            {
+              className: 'is-remove',
+              icon: removeIcon,
+              label: 'Remove shape',
+              onActivate: () => { onShapeRemove(shape.id) }
+            }
+          ]
+        ) }
+      </>
     )
   }
 
@@ -622,7 +1048,7 @@ export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
       <svg
         className='room-plan'
         onPointerCancel={handlePointerUp}
-        onPointerDown={() => { onSelect('') }}
+        onPointerDown={handleFloorPointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         ref={svgRef}
@@ -650,6 +1076,7 @@ export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
           />
           { renderGrid() }
         </g>
+        { room.shapes.map(renderShape) }
         <path
           className='room-plan-wall'
           d={outlinePath(room.rects)}
@@ -658,6 +1085,48 @@ export const RoomPlan: FunctionComponent<RoomPlanPropsType> = ({
         { room.doors.map(renderDoor) }
         { room.placements.map(renderPlacement) }
         { selectedPlacement && renderPlacementHandles(selectedPlacement) }
+        { selectedShape && renderShapeSelection(selectedShape) }
+        {
+          draft &&
+            <>
+              <rect
+                className='room-plan-draft'
+                height={draft.depth}
+                width={draft.width}
+                x={draft.x}
+                y={draft.y}
+              />
+              {
+                unit > 0 &&
+                  <SelectionOverlay
+                    bounds={{ left: view.left, top: view.top }}
+                    rect={draft}
+                    unit={unit}
+                    widthEdge='bottom'
+                  />
+              }
+            </>
+        }
+        {
+          guides.x !== null &&
+            <line
+              className='snap-guide'
+              x1={guides.x}
+              x2={guides.x}
+              y1={0}
+              y2={roomSize.depth}
+            />
+        }
+        {
+          guides.y !== null &&
+            <line
+              className='snap-guide'
+              x1={0}
+              x2={roomSize.width}
+              y1={guides.y}
+              y2={guides.y}
+            />
+        }
       </svg>
     </RoomPlanStyled>
   )

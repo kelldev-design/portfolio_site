@@ -61,7 +61,9 @@ export const parseRoomPlanner = (json: string): RoomPlannerStateType => {
       id: room.id,
       name: room.name,
       placements: room.placements.map(toPlacement),
-      rects: toRects(room)
+      rects: toRects(room),
+      // Rooms saved before shapes existed have none.
+      shapes: Array.isArray(room.shapes) ? room.shapes : []
     })),
     selectedRoomId: parsed.selectedRoomId ?? ''
   }
