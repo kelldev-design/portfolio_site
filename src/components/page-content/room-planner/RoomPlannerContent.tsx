@@ -15,7 +15,6 @@ import {
   createId,
   formatInches,
   loadCollapsedSections,
-  loadRoomPlanner,
   ROOM_PLANNER_KEY,
   saveCollapsedSections,
   saveRoomPlanner
@@ -30,6 +29,10 @@ import {
   shapeSize,
   snapToWall
 } from './shapeGeometry'
+import {
+  type InitialSyncType,
+  useRoomPlanSave
+} from './useRoomPlanSave'
 import {
   type DoorType,
   type FurnitureType,
@@ -133,8 +136,21 @@ const freeSpot = (
   return spot
 }
 
-const RoomPlannerContent: FunctionComponent = () => {
-  const [ plannerState, setPlannerState ] = useState<RoomPlannerStateType>(loadRoomPlanner)
+interface RoomPlannerContentPropsType {
+  initialState: RoomPlannerStateType
+  initialSync: InitialSyncType
+}
+
+const formatSavedAt = (savedAt: string): string => new Date(savedAt).toLocaleString(
+  undefined,
+  { dateStyle: 'medium', timeStyle: 'short' }
+)
+
+export const RoomPlannerContent: FunctionComponent<RoomPlannerContentPropsType> = ({
+  initialState,
+  initialSync
+}) => {
+  const [ plannerState, setPlannerState ] = useState<RoomPlannerStateType>(initialState)
   const [ selectedPlacementId, setSelectedPlacementId ] = useState('')
   const [ selectedDoorId, setSelectedDoorId ] = useState('')
   const [ editing, setEditing ] = useState<EditingType | null>(null)
@@ -159,6 +175,11 @@ const RoomPlannerContent: FunctionComponent = () => {
   useEffect(
     () => { saveRoomPlanner(plannerState) },
     [ plannerState ]
+  )
+
+  const sync = useRoomPlanSave(
+    plannerState,
+    initialSync
   )
 
   useEffect(
@@ -854,12 +875,65 @@ const RoomPlannerContent: FunctionComponent = () => {
       .catch(() => { setCopyStatus('Could not copy. Check the browser allows clipboard access.') })
   }
 
-  /* The saved plan, with a button to copy it above a viewer to browse it. */
+  /* Swaps this browser's unsaved edits for the version another browser saved. */
+  const handleTakeServerVersion = (): void => {
+    if (!window.confirm('Load the version saved on the server? Your unsaved edits in this browser are discarded.')) return
+
+    const plan = sync.takeServerVersion()
+
+    if (!plan) return
+
+    setEditing(null)
+    selectPlacement('')
+    setPlannerState(plan)
+  }
+
+  /* Where the plan stands against the server's copy, under the page title. */
+  const renderSyncStatus = (): ReactElement => {
+    const [ text, tone ] = ((): [ string, string ] => {
+      if (sync.newerServer) return [ `A newer version was saved on the server at ${formatSavedAt(sync.newerServer.updatedAt)}. Your edits here are kept until you save over it or load it.`, 'is-warning' ]
+      if (sync.isSaving) return [ 'Saving…', '' ]
+      if (sync.error) return [ `Not saved: ${sync.error}`, 'is-warning' ]
+      if (!sync.isServerReachable) return [ 'Could not load the saved plan, so this is the copy in this browser.', 'is-warning' ]
+      if (sync.isDirty) return [ 'Unsaved changes, kept in this browser.', '' ]
+
+      return [ sync.savedAt ? `Saved ${formatSavedAt(sync.savedAt)}.` : 'Not saved to the server yet.', '' ]
+    })()
+
+    return (
+      <p
+        aria-live='polite'
+        className={`room-planner-sync ${tone}`}
+      >
+        { text }
+      </p>
+    )
+  }
+
+  /* Saving to the server and copying the plan, above a viewer to browse it. */
   const renderJson = (): ReactElement =>
     <div className='room-planner-json'>
       <div className='room-planner-selection-actions'>
         <button
           className='room-planner-submit'
+          disabled={!sync.isDirty || sync.isSaving}
+          onClick={sync.save}
+          type='button'
+        >
+          { sync.isSaving ? 'Saving…' : 'Save' }
+        </button>
+        {
+          sync.newerServer &&
+            <button
+              className='room-planner-row-action'
+              onClick={handleTakeServerVersion}
+              type='button'
+            >
+              Load server version
+            </button>
+        }
+        <button
+          className='room-planner-row-action'
           onClick={handleCopyJson}
           type='button'
         >
@@ -978,8 +1052,9 @@ const RoomPlannerContent: FunctionComponent = () => {
             Room planner
           </TagH>
           <TagP>
-            All measurements are in inches, and everything is saved in this browser.
+            All measurements are in inches.
           </TagP>
+          { renderSyncStatus() }
         </div>
         { renderSection(
           'selected',
@@ -1010,5 +1085,3 @@ const RoomPlannerContent: FunctionComponent = () => {
     </RoomPlannerContentStyled>
   )
 }
-
-export default RoomPlannerContent

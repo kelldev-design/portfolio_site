@@ -156,3 +156,25 @@ export const GET_YIELD_CURVE = gql`
     }
   }
 `
+
+export const GET_ROOM_PLAN = gql`
+  query GetRoomPlan {
+    roomPlan {
+      data
+      updatedAt
+    }
+  }
+`
+
+export const SAVE_ROOM_PLAN = gql`
+  mutation SaveRoomPlan($data: String!) {
+    saveRoomPlan(data: $data) {
+      code
+      message
+      success
+      roomPlan {
+        updatedAt
+      }
+    }
+  }
+`

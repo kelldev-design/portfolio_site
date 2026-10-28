@@ -234,6 +234,11 @@ export const RoomPlannerContentStyles = css`
     font-family: inherit;
     font-size: 13px;
     padding: ${SPACING_Y} ${SPACING_X};
+
+    &:disabled {
+      background-color: ${GREY3};
+      cursor: default;
+    }
   }
 
   .room-planner-plan-header {
@@ -250,6 +255,15 @@ export const RoomPlannerContentStyles = css`
   }
 
   /* The selected piece's or door's controls, stacked to fit the sidebar. */
+  .room-planner-sync {
+    color: ${GREY3};
+    font-size: 12px;
+
+    &.is-warning {
+      color: ${STATUS_BAD};
+    }
+  }
+
   .room-planner-json {
     display: flex;
     flex-direction: column;

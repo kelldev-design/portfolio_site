@@ -40,6 +40,33 @@ const toPlacement = (placement: PlacementType & { isRotated?: boolean }): Placem
   y: placement.y
 })
 
+/* Reads a saved plan, from this browser or the server, bringing older shapes up to date.
+   Throws when the text is not JSON. */
+export const parseRoomPlanner = (json: string): RoomPlannerStateType => {
+  const parsed = JSON.parse(json) as Partial<RoomPlannerStateType>
+  const furniture = Array.isArray(parsed.furniture) ? parsed.furniture : []
+  const rooms = Array.isArray(parsed.rooms) ? parsed.rooms : []
+
+  return {
+    furniture: furniture.map((item: FurnitureType & LegacyShapeType) => ({
+      color: item.color,
+      id: item.id,
+      name: item.name,
+      rects: toRects(item)
+    })),
+    rooms: rooms.map((room: RoomType & LegacyShapeType) => ({
+      // Rooms saved before doors existed have none, and doors saved before entryways
+      // existed are all swing doors.
+      doors: Array.isArray(room.doors) ? room.doors.map(door => ({ ...door, kind: door.kind ?? 'swing' })) : [],
+      id: room.id,
+      name: room.name,
+      placements: room.placements.map(toPlacement),
+      rects: toRects(room)
+    })),
+    selectedRoomId: parsed.selectedRoomId ?? ''
+  }
+}
+
 export const loadRoomPlanner = (): RoomPlannerStateType => {
   try {
     const stored = window.localStorage.getItem(ROOM_PLANNER_KEY)
@@ -52,28 +79,7 @@ export const loadRoomPlanner = (): RoomPlannerStateType => {
       return DEFAULT_ROOM_PLANNER
     }
 
-    const parsed = JSON.parse(stored) as Partial<RoomPlannerStateType>
-    const furniture = Array.isArray(parsed.furniture) ? parsed.furniture : []
-    const rooms = Array.isArray(parsed.rooms) ? parsed.rooms : []
-
-    return {
-      furniture: furniture.map((item: FurnitureType & LegacyShapeType) => ({
-        color: item.color,
-        id: item.id,
-        name: item.name,
-        rects: toRects(item)
-      })),
-      rooms: rooms.map((room: RoomType & LegacyShapeType) => ({
-        // Rooms saved before doors existed have none, and doors saved before entryways
-        // existed are all swing doors.
-        doors: Array.isArray(room.doors) ? room.doors.map(door => ({ ...door, kind: door.kind ?? 'swing' })) : [],
-        id: room.id,
-        name: room.name,
-        placements: room.placements.map(toPlacement),
-        rects: toRects(room)
-      })),
-      selectedRoomId: parsed.selectedRoomId ?? ''
-    }
+    return parseRoomPlanner(stored)
   } catch {
     return EMPTY_STATE
   }
@@ -87,6 +93,54 @@ export const saveRoomPlanner = (state: RoomPlannerStateType): void => {
     )
   } catch {
     /* storage unavailable */
+  }
+}
+
+/* How this browser's plan stands against the server's: whether it holds edits not saved
+   there yet, and when the server version it started from was saved, so a refresh can tell
+   whether another browser has saved since. */
+export interface SyncMetaType {
+  isDirty: boolean
+  baseUpdatedAt: string | null
+}
+
+const SYNC_KEY = 'kelldev-room-planner-sync'
+
+export const loadSyncMeta = (): SyncMetaType => {
+  try {
+    const stored = window.localStorage.getItem(SYNC_KEY)
+
+    // A plan kept from before plans were saved to the server has never been compared with
+    // the server's, so it counts as unsaved edits rather than being replaced unseen.
+    if (stored === null) return { baseUpdatedAt: null, isDirty: hasStoredPlan() }
+
+    const parsed = JSON.parse(stored) as Partial<SyncMetaType>
+
+    return {
+      baseUpdatedAt: parsed.baseUpdatedAt ?? null,
+      isDirty: parsed.isDirty === true
+    }
+  } catch {
+    return { baseUpdatedAt: null, isDirty: false }
+  }
+}
+
+export const saveSyncMeta = (meta: SyncMetaType): void => {
+  try {
+    window.localStorage.setItem(
+      SYNC_KEY,
+      JSON.stringify(meta)
+    )
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+export const hasStoredPlan = (): boolean => {
+  try {
+    return window.localStorage.getItem(ROOM_PLANNER_KEY) !== null
+  } catch {
+    return false
   }
 }
 

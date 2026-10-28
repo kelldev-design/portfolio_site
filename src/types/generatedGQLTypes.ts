@@ -94,6 +94,8 @@ export interface Mutation {
   login: AuthResponse
   /** Sets the site order. `ids` must list every portfolio item exactly once, first to last. */
   reorderPortfolioItems: ReorderPortfolioItemsResponse
+  /** Replaces the saved room plan. `data` must be a JSON object with `furniture` and `rooms` arrays. */
+  saveRoomPlan: SaveRoomPlanResponse
   /** Replaces every field of the item with `id`. Takes the same input as `createPortfolioItem`. */
   updatePortfolioItem: UpdatePortfolioItemResponse
 }
@@ -109,6 +111,10 @@ export interface MutationLoginArgs {
 
 export interface MutationReorderPortfolioItemsArgs {
   ids: Array<Scalars['Int']['input']>
+}
+
+export interface MutationSaveRoomPlanArgs {
+  data: Scalars['String']['input']
 }
 
 export interface MutationUpdatePortfolioItemArgs {
@@ -160,6 +166,8 @@ export interface Query {
   portfolioItems: PortfolioItem[]
   products: Product[]
   projectImages: ProjectImage[]
+  /** The saved room plan, or null before one is saved. Admin only. */
+  roomPlan?: Maybe<RoomPlan>
   yieldCurve: YieldCurve
 }
 
@@ -179,6 +187,21 @@ export interface ReorderPortfolioItemsResponse {
   code: Scalars['Int']['output']
   message: Scalars['String']['output']
   portfolioItems?: Maybe<PortfolioItem[]>
+  success: Scalars['Boolean']['output']
+}
+
+/** A room planner plan. `data` is the plan as JSON text. */
+export interface RoomPlan {
+  __typename?: 'RoomPlan'
+  data: Scalars['String']['output']
+  updatedAt: Scalars['String']['output']
+}
+
+export interface SaveRoomPlanResponse {
+  __typename?: 'SaveRoomPlanResponse'
+  code: Scalars['Int']['output']
+  message: Scalars['String']['output']
+  roomPlan?: Maybe<RoomPlan>
   success: Scalars['Boolean']['output']
 }
 
