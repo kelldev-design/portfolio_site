@@ -61,7 +61,7 @@ const LoginContent = (): ReactElement => {
     void login({
       variables: {
         password,
-        username
+        username: username.trim()
       }
     })
       .then(({ data }) => {
@@ -99,10 +99,13 @@ const LoginContent = (): ReactElement => {
           t={0}
         >
           <InputCustom
+            autoCapitalize='none'
             autoComplete='username'
+            autoCorrect='off'
             id='login-username'
             label='Username'
             onChange={handleUsernameChange}
+            spellCheck={false}
             value={username}
           />
         </Spacer>
