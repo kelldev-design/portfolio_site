@@ -8,6 +8,7 @@ import {
   useState
 } from 'react'
 import { Flipped, Flipper } from 'react-flip-toolkit'
+import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { NavMenuMobileStyles } from './NavMenuMobileStyles'
 import { type PortfolioContextValueType } from '../../../types/contextTypes'
@@ -37,9 +38,12 @@ export const NavMenuMobile: FunctionComponent = () => {
 
   const handleLinkClick = (): void => { closeMenu() }
 
+  const navigate = useNavigate()
+
   const handleLogoutClick = (): void => {
     handleLogout()
     closeMenu()
+    navigate('/')
   }
 
   useClickOutsideRefHandler(
@@ -121,7 +125,6 @@ export const NavMenuMobile: FunctionComponent = () => {
                   handleClick={handleLogoutClick}
                   tabIndex={isNavOpen ? 0 : -1}
                   text='Logout'
-                  toUrl='/'
                 />
               </Spacer>
             </div>
