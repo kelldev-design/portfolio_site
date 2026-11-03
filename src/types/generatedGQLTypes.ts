@@ -39,6 +39,8 @@ export interface CreatePortfolioItemInput {
   products: Array<Scalars['String']['input']>
   projectId: Scalars['String']['input']
   projectImages: Array<Scalars['String']['input']>
+  /** The year the work was done. Omitted or null clears it. */
+  year?: InputMaybe<Scalars['Int']['input']>
 }
 
 export interface CreatePortfolioItemResponse {
@@ -137,6 +139,8 @@ export interface PortfolioItem {
   projectId: Scalars['String']['output']
   /** In gallery order, as given in the input's `projectImages`. */
   projectImages: ProjectImage[]
+  /** The year the work was done, or null when it isn't recorded. */
+  year?: Maybe<Scalars['Int']['output']>
 }
 
 export interface PortfolioLinkInput {

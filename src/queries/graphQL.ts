@@ -32,6 +32,7 @@ export const GET_PORTFOLIO_ITEMS = gql`
         imageUrl
       }
       description
+      year
     }
   }
 `
@@ -71,6 +72,7 @@ export const CREATE_PORTFOLIO_ITEMS = gql`
         projectImages {
           imageUrl
         }
+        year
       }
     }
   }

@@ -16,6 +16,7 @@ interface ProjectDescriptionProps {
   description: string
   productLinks: Link[]
   githubLinks: Link[]
+  year?: number | null
 }
 
 export const ProjectDescription: FunctionComponent<ProjectDescriptionProps> = ({
@@ -24,7 +25,8 @@ export const ProjectDescription: FunctionComponent<ProjectDescriptionProps> = ({
   name,
   products,
   productLinks,
-  githubLinks
+  githubLinks,
+  year
 }) => {
   const renderLinks = (): ReactElement | null => {
     const linkItems = [
@@ -98,7 +100,7 @@ export const ProjectDescription: FunctionComponent<ProjectDescriptionProps> = ({
                 fontSize='16px'
                 size={2}
               >
-                { products.join(' • ') }
+                { [ ...products, ...(year ? [ year.toString() ] : []) ].join(' • ') }
               </TagH>
             </Spacer>
             <TagP>
