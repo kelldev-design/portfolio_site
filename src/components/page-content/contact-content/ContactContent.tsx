@@ -61,7 +61,10 @@ const ContactContent: FunctionComponent = () => {
               r={0}
               t={0}
             >
-              <TagH size={2}>
+              <TagH
+                fontSize='16px'
+                size={1}
+              >
                 Contact
               </TagH>
             </Spacer>

@@ -28,7 +28,7 @@ export const PortfolioGridItem: FunctionComponent<PortfolioGridItemPropsType> = 
           to={`/project/${projectId}`}
         >
           <Image
-            altText={`View project page for ${name}`}
+            altText={name}
             aspectRatio='1 / 1'
             src={homeImage}
           />

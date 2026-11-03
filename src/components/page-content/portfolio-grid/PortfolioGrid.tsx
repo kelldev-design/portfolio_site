@@ -21,6 +21,12 @@ import { PortfolioContext } from '../../wrappers/PortfolioContextProvider'
 
 const PortfolioGridStyled = styled.div`${PortfolioGridStyles}`
 
+const H1_BY_FILTER: Record<string, string> = {
+  '': 'Kelldev.Design — design and development portfolio by Coleman Kelleghan',
+  design: 'Kelldev.Design — design portfolio by Coleman Kelleghan',
+  development: 'Kelldev.Design — development portfolio by Coleman Kelleghan'
+}
+
 interface PortfolioGridProps {
   filter?: string
 }
@@ -136,6 +142,13 @@ const PortfolioGrid: FunctionComponent<PortfolioGridProps> = ({ filter }) => {
 
   return (
     <>
+      <h1 className='visually-hidden'>{ Object.prototype.hasOwnProperty.call(
+        H1_BY_FILTER,
+        filter ?? ''
+      )
+        ? H1_BY_FILTER[filter ?? '']
+        : H1_BY_FILTER[''] }
+      </h1>
       { !areHomeImagesLoaded && <LoadingOverlay fadeIn={false} /> }
       <PageRow>
         <Container>

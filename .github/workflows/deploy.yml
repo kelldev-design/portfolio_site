@@ -9,6 +9,9 @@ on:
     types: [completed]
     branches: [main]
   workflow_dispatch:
+  # Weekly rebuild so sitemap.xml picks up projects added through the admin UI.
+  schedule:
+    - cron: '0 6 * * 1'
 
 concurrency:
   group: deploy-production
@@ -31,7 +34,7 @@ jobs:
     # to this workflow.
     if: >-
       vars.AWS_DEPLOY_ROLE_ARN != '' &&
-      (github.event_name == 'workflow_dispatch' ||
+      ((github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') ||
        github.event.workflow_run.conclusion == 'success')
     steps:
       - uses: actions/checkout@v4

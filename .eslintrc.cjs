@@ -7,7 +7,7 @@ module.exports = {
     'plugin:react-hooks/recommended',
     'standard-with-typescript'
   ],
-  ignorePatterns: [ 'dist' ],
+  ignorePatterns: [ 'dist', 'scripts' ],
   parser: '@typescript-eslint/parser',
   parserOptions: {
     project: './tsconfig.json',

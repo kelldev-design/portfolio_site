@@ -1,6 +1,7 @@
 import React, { type FunctionComponent, Suspense } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { LoadingOverlay } from '../components/common/loading-overlay/LoadingOverlay'
+import { usePageMeta } from '../components/hooks/usePageMeta'
 import { hasValidAuthToken } from '../utils/auth'
 
 const RoomPlannerPage = React.lazy(async () => await import('../components/page-content/room-planner/RoomPlannerPage'))
@@ -9,6 +10,11 @@ const RoomPlannerPage = React.lazy(async () => await import('../components/page-
    checks the saved token itself; login brings the admin back here. */
 export const RoomPlanner: FunctionComponent = () => {
   const location = useLocation()
+
+  usePageMeta({
+    title: 'Room Planner | Kelldev.Design',
+    noindex: true
+  })
 
   if (!hasValidAuthToken()) {
     return (

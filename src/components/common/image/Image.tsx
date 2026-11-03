@@ -10,6 +10,7 @@ interface ImageProps {
   onLoad?: ReactEventHandler
   altText: string
   aspectRatio?: string
+  isEager?: boolean
 }
 
 export const Image: FunctionComponent<ImageProps> = ({
@@ -17,12 +18,15 @@ export const Image: FunctionComponent<ImageProps> = ({
   width = '100%',
   onLoad,
   altText,
-  aspectRatio
+  aspectRatio,
+  isEager = false
 }) => (
   <ImageStyled
     alt={altText}
     aspectRatio={aspectRatio}
     cssWidth={width}
+    decoding='async'
+    loading={isEager ? 'eager' : 'lazy'}
     onLoad={onLoad}
     src={src}
   />

@@ -11,6 +11,7 @@ const ProjectImageStyled = styled.div`${ProjectImageStyles}`
 interface ProjectImagePropsType {
   imageUrl: string
   altText: string
+  isEager?: boolean
   isLoaded: boolean
   isNavigating: boolean
 }
@@ -18,6 +19,7 @@ interface ProjectImagePropsType {
 export const ProjectImage: FunctionComponent<ProjectImagePropsType> = ({
   altText,
   imageUrl,
+  isEager,
   isLoaded,
   isNavigating
 }) => {
@@ -36,6 +38,7 @@ export const ProjectImage: FunctionComponent<ProjectImagePropsType> = ({
             <Image
               altText={altText}
               aspectRatio={aspectRatio ?? undefined}
+              isEager={isEager}
               src={imageUrl}
             />
           </div>
