@@ -2,6 +2,7 @@ import { type FunctionComponent, type ReactElement } from 'react'
 import styled from 'styled-components'
 import { ProjectDescriptionStyles } from './ProjectDescriptionStyles'
 import { type Link } from '../../../types/generatedGQLTypes'
+import { splitParagraphs } from '../../../utils/helpers'
 import { Spacer } from '../../layout/spacer/Spacer'
 import { TagH } from '../tag-h/TagH'
 import { TagP } from '../tag-p/TagP'
@@ -103,9 +104,21 @@ export const ProjectDescription: FunctionComponent<ProjectDescriptionProps> = ({
                 { [ ...products, ...(year ? [ year.toString() ] : []) ].join(' • ') }
               </TagH>
             </Spacer>
-            <TagP>
-              { description }
-            </TagP>
+            {
+              splitParagraphs(description).map((paragraph, index, paragraphs) => (
+                <Spacer
+                  b={index === paragraphs.length - 1 ? 0 : 1.5}
+                  key={index}
+                  l={0}
+                  r={0}
+                  t={0}
+                >
+                  <TagP>
+                    { paragraph }
+                  </TagP>
+                </Spacer>
+              ))
+            }
             { renderLinks() }
           </Spacer>
         </div>

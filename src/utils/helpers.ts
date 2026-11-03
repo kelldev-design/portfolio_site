@@ -108,3 +108,10 @@ export const truncateDescription = (
 
   return `${trimmed}…`
 }
+
+/** Splits text into paragraphs at blank lines, the way descriptions are written in the admin form. */
+export const splitParagraphs = (text: string): string[] =>
+  text
+    .split(/\n\s*\n/)
+    .map(paragraph => paragraph.trim())
+    .filter(paragraph => paragraph !== '')
