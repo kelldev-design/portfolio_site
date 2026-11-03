@@ -28,6 +28,7 @@ export const Header: FunctionComponent = () => {
           <Image
             altText='Kelleghan Design homepage'
             aspectRatio={aspectRatio ?? undefined}
+            isEager
             src={kelldevDesignLogo}
           />
         </LinkDelayed>

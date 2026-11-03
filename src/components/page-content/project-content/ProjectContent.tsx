@@ -5,8 +5,11 @@ import {
 } from 'react'
 import styled from 'styled-components'
 import { ProjectContentStyles } from './ProjectContentStyles'
+import { SITE_NAME, SITE_ORIGIN } from '../../../utils/constants/site'
+import { truncateDescription } from '../../../utils/helpers'
 import { ProjectDescription } from '../../common/project-description/ProjectDescription'
 import { ProjectImage } from '../../common/project-image/ProjectImage'
+import { usePageMeta } from '../../hooks/usePageMeta'
 import { Container } from '../../layout/container/Container'
 import { PageRow } from '../../layout/page-row/PageRow'
 import { Pure } from '../../layout/pure/Pure'
@@ -40,11 +43,38 @@ const ProjectContent: FunctionComponent<ProjectContentProps> = ({ projectId }) =
     year
   } = portfolioItem
 
+  const truncatedDescription = truncateDescription(description)
+  const projectUrl = `${SITE_ORIGIN}/project/${projectId}`
+
+  usePageMeta({
+    title: `${name} | ${SITE_NAME}`,
+    description: truncatedDescription,
+    canonicalPath: `/project/${projectId}`,
+    image: primaryImage.imageUrl,
+    type: 'article',
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'CreativeWork',
+      name,
+      description: truncatedDescription,
+      image: primaryImage.imageUrl,
+      url: projectUrl,
+      ...(year ? { dateCreated: year } : {}),
+      author: {
+        '@type': 'Person',
+        name: 'Coleman Kelleghan',
+        url: SITE_ORIGIN
+      },
+      keywords: products.map(product => product.name).join(', ')
+    }
+  })
+
   const renderColumnView = (): ReactElement => {
     const column1 = [
       renderProjectImage(
-        `${name} primary image`,
-        primaryImage.imageUrl
+        name,
+        primaryImage.imageUrl,
+        true
       )
     ]
 
@@ -64,14 +94,14 @@ const ProjectContent: FunctionComponent<ProjectContentProps> = ({ projectId }) =
       if (index % 2 === 0) {
         column2.push(
           renderProjectImage(
-            `${name} image ${index}`,
+            `${name} screenshot ${index + 1}`,
             imageUrl
           )
         )
       } else {
         column1.push(
           renderProjectImage(
-            `${name} image ${index}`,
+            `${name} screenshot ${index + 1}`,
             imageUrl
           )
         )
@@ -118,11 +148,13 @@ const ProjectContent: FunctionComponent<ProjectContentProps> = ({ projectId }) =
 
   const renderProjectImage = (
     altText: string,
-    imageUrl: string
+    imageUrl: string,
+    isEager = false
   ): ReactElement =>
     <ProjectImage
       altText={altText}
       imageUrl={imageUrl}
+      isEager={isEager}
       isLoaded={projectImagesPreloaded[imageUrl]}
       isNavigating={isNavigating}
       key={imageUrl}
@@ -187,8 +219,9 @@ const ProjectContent: FunctionComponent<ProjectContentProps> = ({ projectId }) =
         { renderProjectDescription() }
         {
           renderProjectImage(
-            `${name} primary image`,
-            primaryImage.imageUrl
+            name,
+            primaryImage.imageUrl,
+            true
           )
         }
         {
@@ -197,7 +230,7 @@ const ProjectContent: FunctionComponent<ProjectContentProps> = ({ projectId }) =
             index
           ) => (
             renderProjectImage(
-              `${name} image ${index}`,
+              `${name} screenshot ${index + 1}`,
               imageUrl
             )
           ))

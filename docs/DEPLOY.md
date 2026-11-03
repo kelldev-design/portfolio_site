@@ -34,6 +34,11 @@ Deploys are serialised by the `deploy-production` concurrency group and are not
 cancelled in flight. The workflow can also be run manually via
 `workflow_dispatch`, which bypasses the ci gate and deploys the default branch.
 
+A weekly `schedule` trigger (Mondays 06:00 UTC) does the same as `workflow_dispatch`, so
+projects added through the admin UI reach `sitemap.xml` without a code push. `npm run build`
+generates `dist/sitemap.xml` from the live API (`scripts/generate-sitemap.mjs`) and fails if
+that fetch fails.
+
 Pull requests and pushes to `main` additionally run `.github/workflows/ci.yml`:
 lint (eslint without `--fix`), typecheck (`tsc --noEmit`), and build.
 

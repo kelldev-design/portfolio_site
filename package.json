@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "build:dev": "tsc && vite build --mode development",
+    "build": "tsc && vite build && npm run sitemap",
+    "build:dev": "tsc && vite build --mode development && npm run sitemap",
+    "sitemap": "node --env-file=.env.production scripts/generate-sitemap.mjs",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0 --fix",
     "preview": "vite preview",
     "generate": "graphql-codegen",

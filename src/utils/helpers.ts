@@ -79,3 +79,32 @@ export const deriveAspectRatioFromImageUrl = (imageUrl: string): string | null =
 
   return `${parsedX} / ${parsedY}`
 }
+
+export const truncateDescription = (
+  text: string,
+  max = 155
+): string => {
+  const normalized = text.replace(
+    /\s+/g,
+    ' '
+  ).trim()
+
+  if (normalized.length <= max) return normalized
+
+  const cut = normalized.slice(
+    0,
+    max - 1
+  )
+  const lastSpace = cut.lastIndexOf(' ')
+  const trimmed = (lastSpace > 0
+    ? cut.slice(
+      0,
+      lastSpace
+    )
+    : cut).replace(
+    /[\s,;:.\-–—]+$/,
+    ''
+  )
+
+  return `${trimmed}…`
+}
