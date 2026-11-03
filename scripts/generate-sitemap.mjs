@@ -1,5 +1,6 @@
 import { existsSync, writeFileSync } from 'node:fs'
 
+// Keep in sync with SITE_ORIGIN in src/utils/constants/site.ts (a plain .mjs script cannot import the .ts file)
 const SITE_ORIGIN = 'https://kelldev.design'
 const API_URL = process.env.VITE_PORTFOIO_API_URL || 'https://api.kelldev.design/'
 const DIST_DIR = 'dist'

@@ -11,8 +11,6 @@ interface PageMetaOptions {
   jsonLd?: Record<string, unknown>
 }
 
-const JSON_LD_SELECTOR = 'script[type="application/ld+json"][data-page-json-ld]'
-
 const upsertMeta = (
   selectorAttr: 'name' | 'property',
   name: string,
@@ -157,7 +155,7 @@ export const usePageMeta = ({
       document.head.appendChild(script)
 
       return () => {
-        document.head.querySelector(JSON_LD_SELECTOR)?.remove()
+        script.remove()
       }
     },
     [ jsonLdString ]
