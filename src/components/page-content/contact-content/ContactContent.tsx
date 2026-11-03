@@ -115,7 +115,7 @@ const ContactContent: FunctionComponent = () => {
               </TagH>
             </Spacer>
             <TagP>
-              This website is a React and TypeScript single-page app built with Vite and styled-components, served as a static bundle from S3 through CloudFront. Its projects come from a GraphQL API built with Apollo Server and Prisma on SQLite, running on an AWS EC2 instance behind CloudFront and nginx, and are managed from an admin area behind a JWT login. The markets page charts Federal Reserve economic data from FRED with Recharts, and images are served by the { renderImageKitLink() } CDN. All of the infrastructure is defined in Terraform and deployed by GitHub Actions, with lint, typecheck and build checks before every release. See how this website was built by checking out the code:
+              This website is built with React and TypeScript and hosted on AWS. Its projects come from a GraphQL API built with Apollo Server and Prisma, images are served by the { renderImageKitLink() } CDN, and the infrastructure is defined in Terraform and deployed with GitHub Actions. See how this website was built by checking out the code:
             </TagP>
           </div>
           <Spacer
