@@ -79,9 +79,9 @@ const ContactContent: FunctionComponent = () => {
           <LinkCustom
             hasLinkStyling
             isExternal
-            to='mailto: coleman@kelleghandesign.com'
+            to='mailto:coleman@kelldev.design'
           >
-            coleman@kelleghandesign.com
+            coleman@kelldev.design
           </LinkCustom>
         </FlexWrapper>
       </Spacer>
@@ -112,7 +112,7 @@ const ContactContent: FunctionComponent = () => {
               </TagH>
             </Spacer>
             <TagP>
-              This website is built using React and create-react-app with Typescript. Images are served by the { renderImageKitLink() } CDN. See how I build React websites by checking out the code repository:
+              This website is a React and TypeScript single-page app built with Vite and styled-components, served as a static bundle from S3 through CloudFront. Its projects come from a GraphQL API built with Apollo Server and Prisma on SQLite, running on an AWS EC2 instance behind CloudFront and nginx, and are managed from an admin area behind a JWT login. The markets page charts Federal Reserve economic data from FRED with Recharts, and images are served by the { renderImageKitLink() } CDN. All of the infrastructure is defined in Terraform and deployed by GitHub Actions, with lint, typecheck and build checks before every release. See how this website was built by checking out the code:
             </TagP>
           </div>
           <Spacer
@@ -125,9 +125,24 @@ const ContactContent: FunctionComponent = () => {
               hasLinkStyling
               isExternal
               target='_blank'
-              to='https://github.com/kelleghan1/portfolio_site'
+              to='https://github.com/kelldev-design/portfolio_site'
             >
-              View the code for this website on Github
+              View the website code on GitHub
+            </LinkCustom>
+          </Spacer>
+          <Spacer
+            b={0}
+            l={0}
+            r={0}
+            t={1}
+          >
+            <LinkCustom
+              hasLinkStyling
+              isExternal
+              target='_blank'
+              to='https://github.com/kelldev-design/portfolio_api'
+            >
+              View the API code on GitHub
             </LinkCustom>
           </Spacer>
         </FlexWrapper>

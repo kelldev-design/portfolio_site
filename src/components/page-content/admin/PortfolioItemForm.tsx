@@ -59,6 +59,8 @@ interface FormStateType {
   products: string[]
   projectId: string
   projectImages: ImageRowType[]
+  /** As typed, so a half-typed year can sit in the field. Empty means no year. */
+  year: string
 }
 
 interface CreateMutationDataType {
@@ -80,6 +82,9 @@ type FormErrorsType = Record<string, string>
 
 const CATEGORY_OPTIONS = [ 'design', 'development' ]
 const PROJECT_ID_PATTERN = /^[a-zA-Z0-9-]+$/
+const YEAR_PATTERN = /^\d{4}$/
+/** The API's range: from 2000 to next year. */
+const FIRST_YEAR = 2000
 
 const emptyLinkRow: LinkRowType = {
   isInternal: false,
@@ -97,7 +102,8 @@ const initialFormState: FormStateType = {
   productLinks: [],
   products: [],
   projectId: '',
-  projectImages: []
+  projectImages: [],
+  year: ''
 }
 
 const toLinkRows = (links: PortfolioItem['githubLinks']): LinkRowType[] =>
@@ -117,7 +123,8 @@ const toFormState = (portfolioItem: PortfolioItem): FormStateType => ({
   productLinks: toLinkRows(portfolioItem.productLinks),
   products: portfolioItem.products.map(({ name }) => name),
   projectId: portfolioItem.projectId,
-  projectImages: portfolioItem.projectImages.map(({ imageUrl }) => newImageRow(imageUrl))
+  projectImages: portfolioItem.projectImages.map(({ imageUrl }) => newImageRow(imageUrl)),
+  year: portfolioItem.year?.toString() ?? ''
 })
 
 let nextImageRowKey = 0
@@ -177,7 +184,7 @@ export const PortfolioItemForm: FunctionComponent<PortfolioItemFormPropsType> = 
   }
 
   const handleTextChange = (
-    field: 'description' | 'homeImage' | 'name' | 'primaryImage' | 'projectId'
+    field: 'description' | 'homeImage' | 'name' | 'primaryImage' | 'projectId' | 'year'
   ): ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement> =>
     event => {
       setField(
@@ -324,7 +331,8 @@ export const PortfolioItemForm: FunctionComponent<PortfolioItemFormPropsType> = 
       productLinks: cleanLinks(formState.productLinks),
       products: formState.products.map(product => product.trim()).filter(product => product !== ''),
       projectId: formState.projectId.trim(),
-      projectImages: formState.projectImages.map(({ url }) => url.trim()).filter(imageUrl => imageUrl !== '')
+      projectImages: formState.projectImages.map(({ url }) => url.trim()).filter(imageUrl => imageUrl !== ''),
+      year: formState.year.trim() === '' ? null : Number(formState.year.trim())
     }
   }
 
@@ -361,6 +369,14 @@ export const PortfolioItemForm: FunctionComponent<PortfolioItemFormPropsType> = 
     else if (portfolioMap[input.projectId] && input.projectId !== portfolioItem?.projectId) formErrors.projectId = 'A project with this project id already exists.'
 
     if (input.description === '') formErrors.description = 'A description is required.'
+
+    const year = formState.year.trim()
+    const latestYear = new Date().getFullYear() + 1
+
+    if (year !== '' && (!YEAR_PATTERN.test(year) || Number(year) < FIRST_YEAR || Number(year) > latestYear)) {
+      formErrors.year = `Enter a year from ${FIRST_YEAR} to ${latestYear}, or leave it empty.`
+    }
+
     if (input.categories.length === 0) formErrors.categories = 'Select at least one category.'
 
     if (input.homeImage === '') formErrors.homeImage = 'A home image url is required.'
@@ -699,6 +715,21 @@ export const PortfolioItemForm: FunctionComponent<PortfolioItemFormPropsType> = 
             onChange={handleTextChange('projectId')}
             placeholder='letters, numbers and hyphens only'
             value={formState.projectId}
+          />
+        </Spacer>
+        <Spacer
+          b={1}
+          l={0}
+          r={0}
+          t={0}
+        >
+          <InputCustom
+            error={errors.year}
+            id='portfolio-item-year'
+            label='Year'
+            onChange={handleTextChange('year')}
+            placeholder='the year the work was done, e.g. 2016'
+            value={formState.year}
           />
         </Spacer>
         <Spacer

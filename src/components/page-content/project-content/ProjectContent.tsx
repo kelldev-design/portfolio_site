@@ -36,7 +36,8 @@ const ProjectContent: FunctionComponent<ProjectContentProps> = ({ projectId }) =
     primaryImage,
     products,
     productLinks,
-    githubLinks
+    githubLinks,
+    year
   } = portfolioItem
 
   const renderColumnView = (): ReactElement => {
@@ -112,6 +113,7 @@ const ProjectContent: FunctionComponent<ProjectContentProps> = ({ projectId }) =
       name={name}
       productLinks={productLinks ?? []}
       products={products.map(product => product.name)}
+      year={year}
     />
 
   const renderProjectImage = (
