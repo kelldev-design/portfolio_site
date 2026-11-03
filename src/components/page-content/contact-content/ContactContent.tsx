@@ -75,17 +75,7 @@ const ContactContent: FunctionComponent = () => {
               t={0}
             >
               <TagP>
-                Like my work? I take websites, web and mobile apps, and online stores from design through deployment. My strongest skills are React, Node.js, PostgreSQL and AWS, along with brand and graphic design: logos, print material and advertising.
-              </TagP>
-            </Spacer>
-            <Spacer
-              b={1.5}
-              l={0}
-              r={0}
-              t={0}
-            >
-              <TagP>
-                I also build AI solutions and workflows, including AI agents that plan, write and review code, and work with Next.js, React Native, Ruby on Rails and WordPress.
+                Like my work? I create web and software solutions with expertise in TypeScript, React, Node.js, PostgreSQL, and AWS, combining technical engineering with a strong design perspective. From websites and mobile apps to e-commerce platforms, AI-powered solutions, and automated workflows, I bring projects from concept through deployment.
               </TagP>
             </Spacer>
             <Spacer
@@ -137,36 +127,38 @@ const ContactContent: FunctionComponent = () => {
               This website is built with React and TypeScript and hosted on AWS. Its projects come from a GraphQL API built with Apollo Server and Prisma, images are served by the { renderImageKitLink() } CDN, and the infrastructure is defined in Terraform and deployed with GitHub Actions. See how this website was built by checking out the code:
             </TagP>
           </div>
-          <Spacer
-            b={0}
-            l={0}
-            r={0}
-            t={2}
-          >
-            <LinkCustom
-              hasLinkStyling
-              isExternal
-              target='_blank'
-              to='https://github.com/kelldev-design/portfolio_site'
+          <div>
+            <Spacer
+              b={0}
+              l={0}
+              r={0}
+              t={2}
             >
+              <LinkCustom
+                hasLinkStyling
+                isExternal
+                target='_blank'
+                to='https://github.com/kelldev-design/portfolio_site'
+              >
               View the website code on GitHub
-            </LinkCustom>
-          </Spacer>
-          <Spacer
-            b={0}
-            l={0}
-            r={0}
-            t={1}
-          >
-            <LinkCustom
-              hasLinkStyling
-              isExternal
-              target='_blank'
-              to='https://github.com/kelldev-design/portfolio_api'
+              </LinkCustom>
+            </Spacer>
+            <Spacer
+              b={0}
+              l={0}
+              r={0}
+              t={1}
             >
+              <LinkCustom
+                hasLinkStyling
+                isExternal
+                target='_blank'
+                to='https://github.com/kelldev-design/portfolio_api'
+              >
               View the API code on GitHub
-            </LinkCustom>
-          </Spacer>
+              </LinkCustom>
+            </Spacer>
+          </div>
         </FlexWrapper>
       </Spacer>
     </FlexWrapper>

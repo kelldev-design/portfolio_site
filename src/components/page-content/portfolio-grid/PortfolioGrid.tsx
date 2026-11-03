@@ -11,15 +11,17 @@ import {
 import { type HandleEnterUpdateDelete } from 'flip-toolkit/lib/types'
 import { Flipper, Flipped } from 'react-flip-toolkit'
 import styled from 'styled-components'
-import { PortfolioGridStyles } from './PortfolioGridStyles'
+import { PortfolioGridStyles, PortfolioIntroStyles } from './PortfolioGridStyles'
 import { LoadingOverlay } from '../../common/loading-overlay/LoadingOverlay'
 import { PortfolioGridItem } from '../../common/portfolio-grid-item/PortfolioGridItem'
+import { TagP } from '../../common/tag-p/TagP'
 import { Container } from '../../layout/container/Container'
 import { PageRow } from '../../layout/page-row/PageRow'
 import { Spacer } from '../../layout/spacer/Spacer'
 import { PortfolioContext } from '../../wrappers/PortfolioContextProvider'
 
 const PortfolioGridStyled = styled.div`${PortfolioGridStyles}`
+const PortfolioIntroStyled = styled.div`${PortfolioIntroStyles}`
 
 const H1_BY_FILTER: Record<string, string> = {
   '': 'Kelldev.Design — design and development portfolio by Coleman Kelleghan',
@@ -157,6 +159,18 @@ const PortfolioGrid: FunctionComponent<PortfolioGridProps> = ({ filter }) => {
             r={3}
             t={0}
           >
+            <PortfolioIntroStyled className={`fade-in ${isNavigating ? 'fade-out' : ''}`}>
+              <Spacer
+                b={2.5}
+                l={0}
+                r={0}
+                t={0}
+              >
+                <TagP>
+                    A collection of work spanning design and engineering, from client collaborations and full-stack applications to independent products and creative experiments.
+                </TagP>
+              </Spacer>
+            </PortfolioIntroStyled>
             <Flipper
               flipKey={flipKey}
               handleEnterUpdateDelete={handleEnterUpdateDeleteProp}
