@@ -11,7 +11,6 @@ import { Flipped, Flipper } from 'react-flip-toolkit'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { NavMenuMobileStyles } from './NavMenuMobileStyles'
-import { type PortfolioContextValueType } from '../../../types/contextTypes'
 import { ButtonCustom } from '../../common/button-custom/ButtonCustom'
 import { useClickOutsideRefHandler } from '../../hooks/useClickOutsideRefHandler'
 import { PortfolioContext } from '../../wrappers/PortfolioContextProvider'
@@ -24,7 +23,7 @@ export const NavMenuMobile: FunctionComponent = () => {
   const {
     handleLogout,
     isLoggedIn
-  } = useContext(PortfolioContext) as PortfolioContextValueType
+  } = useContext(PortfolioContext)
 
   const [ isNavOpen, setIsNavOpen ] = useState(false)
   const wrapperRef = useRef(null)

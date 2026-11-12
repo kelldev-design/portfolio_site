@@ -8,7 +8,6 @@ import {
   useNavigate,
   useLocation
 } from 'react-router-dom'
-import { type PortfolioContextValueType } from '../../../types/contextTypes'
 import { PortfolioContext } from '../../wrappers/PortfolioContextProvider'
 import { LinkCustom } from '../link-custom/LinkCustom'
 
@@ -32,7 +31,7 @@ export const LinkDelayed: FunctionComponent<LinkDelayedPropsType> = ({
   const {
     handleNavigation,
     handleNavigationComplete
-  } = useContext(PortfolioContext) as PortfolioContextValueType
+  } = useContext(PortfolioContext)
 
   const navigate = useNavigate()
   const location = useLocation()
