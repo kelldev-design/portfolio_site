@@ -12,12 +12,14 @@ interface PortfolioGridItemPropsType {
   homeImage: string
   projectId: string
   name: string
+  year?: number | null
 }
 
 export const PortfolioGridItem: FunctionComponent<PortfolioGridItemPropsType> = ({
   homeImage,
   projectId,
   name,
+  year,
   ...rest
 }) => useMemo(
   () => (
@@ -32,6 +34,13 @@ export const PortfolioGridItem: FunctionComponent<PortfolioGridItemPropsType> = 
             aspectRatio='1 / 1'
             src={homeImage}
           />
+          <div
+            aria-hidden='true'
+            className='hover-overlay'
+          >
+            <span className='hover-overlay-name'>{ name }</span>
+            { year != null && <span className='hover-overlay-year'>{ year }</span> }
+          </div>
         </LinkDelayed>
       </div>
     </PortfolioGridItemStyled>
@@ -42,6 +51,7 @@ export const PortfolioGridItem: FunctionComponent<PortfolioGridItemPropsType> = 
   [
     homeImage,
     projectId,
-    name
+    name,
+    year
   ]
 )
