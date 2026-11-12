@@ -2,7 +2,6 @@ import { useContext, type FunctionComponent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { NavMenuStyles } from './NavMenuStyles'
-import { type PortfolioContextValueType } from '../../../types/contextTypes'
 import { PortfolioContext } from '../../wrappers/PortfolioContextProvider'
 import { NavMenuItem } from '../nav-menu-item/NavMenuItem'
 import { Spacer } from '../spacer/Spacer'
@@ -13,7 +12,7 @@ export const NavMenu: FunctionComponent = () => {
   const {
     handleLogout,
     isLoggedIn
-  } = useContext(PortfolioContext) as PortfolioContextValueType
+  } = useContext(PortfolioContext)
 
   const navigate = useNavigate()
 

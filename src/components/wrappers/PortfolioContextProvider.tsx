@@ -43,7 +43,18 @@ const intialPortfolioContextState: PortfolioContextStateType = {
   projectImagesPreloaded: {}
 }
 
-const PortfolioContext = React.createContext<PortfolioContextStateType>(intialPortfolioContextState)
+const noop = (): void => {}
+
+const defaultPortfolioContextValue: PortfolioContextValueType = {
+  ...intialPortfolioContextState,
+  handleLogin: noop,
+  handleLogout: noop,
+  handleNavigation: () => 0,
+  handleNavigationComplete: noop,
+  setIsMobileNavOpen: noop
+}
+
+const PortfolioContext = React.createContext<PortfolioContextValueType>(defaultPortfolioContextValue)
 
 interface PortfolioContextProviderProps {
   children: ReactElement

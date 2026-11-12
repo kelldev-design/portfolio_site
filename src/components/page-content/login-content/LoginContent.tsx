@@ -10,7 +10,6 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { LoginContentStyles } from './LoginContentStyles'
 import { LOGIN } from '../../../queries/graphQL'
-import { type PortfolioContextValueType } from '../../../types/contextTypes'
 import { type AuthResponse } from '../../../types/generatedGQLTypes'
 import { InputCustom } from '../../common/input-custom/InputCustom'
 import { Container } from '../../layout/container/Container'
@@ -34,7 +33,7 @@ const LoginContent = (): ReactElement => {
   const {
     handleLogin,
     isNavigating
-  } = useContext(PortfolioContext) as PortfolioContextValueType
+  } = useContext(PortfolioContext)
 
   const [ errorMessage, setErrorMessage ] = useState('')
   const [ password, setPassword ] = useState('')

@@ -19,7 +19,6 @@ import {
   GET_PORTFOLIO_ITEMS,
   UPDATE_PORTFOLIO_ITEM
 } from '../../../queries/graphQL'
-import { type PortfolioContextValueType } from '../../../types/contextTypes'
 import {
   type CreatePortfolioItemInput,
   type CreatePortfolioItemResponse,
@@ -151,7 +150,7 @@ export const PortfolioItemForm: FunctionComponent<PortfolioItemFormPropsType> = 
   const {
     portfolioMap,
     projectIds
-  } = useContext(PortfolioContext) as PortfolioContextValueType
+  } = useContext(PortfolioContext)
 
   const [ errors, setErrors ] = useState<FormErrorsType>({})
   const [ formState, setFormState ] = useState<FormStateType>(() => portfolioItem ? toFormState(portfolioItem) : initialFormState)
